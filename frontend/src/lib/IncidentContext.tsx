@@ -169,17 +169,42 @@ export const IncidentProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setBundle(data);
     setGroundTruth(null);
   }, [action]);
-  const lockPrediction = useCallback(() => action('/incident/prediction/lock'), [action]);
-  const runRootExperiment = useCallback(() => action('/incident/experiment/root'), [action]);
-  const runSymptomExperiment = useCallback((serviceId: string, resource: string) => 
-    action('/incident/experiment/symptom', { serviceId, resource }), [action]);
+  const refreshState = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/incident/state`);
+      if (res.ok) {
+        const data: IncidentEvidenceBundle = await res.json();
+        setBundle(data);
+      }
+    } catch (err) {
+      console.error("Failed to refresh state:", err);
+    }
+  }, []);
+
+  const lockPrediction = useCallback(async () => {
+    await action('/incident/prediction/lock');
+    await refreshState();
+  }, [action, refreshState]);
+
+  const runRootExperiment = useCallback(async () => {
+    await action('/incident/experiment/root');
+    await refreshState();
+  }, [action, refreshState]);
+
+  const runSymptomExperiment = useCallback(async (serviceId: string, resource: string) => {
+    await action('/incident/experiment/symptom', { serviceId, resource });
+    await refreshState();
+  }, [action, refreshState]);
   
   const revealGroundTruth = useCallback(async () => {
     const truth = await action('/incident/reveal');
     setGroundTruth(truth);
   }, [action]);
   
-  const completeIncident = useCallback(() => action('/incident/complete'), [action]);
+  const completeIncident = useCallback(async () => {
+    await action('/incident/complete');
+    await refreshState();
+  }, [action, refreshState]);
 
   return (
     <IncidentContext.Provider value={{
