@@ -96,7 +96,7 @@ export const ServiceNode: React.FC<any> = ({ data }) => {
         <div className="flex items-center justify-between border-t border-border pt-3">
           <div className="flex items-center gap-1.5 text-xs text-textMain font-mono">
             <Activity className="w-3.5 h-3.5 text-textMuted" />
-           {Math.round(metrics?.latencyMs ?? 0)} <span className="text-textMuted text-[10px] font-sans">ms</span>
+            {Math.round(metrics?.latencyMs ?? 0)} <span className="text-textMuted text-[10px] font-sans">ms</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-textMain font-mono">
             <ArrowRight className="w-3.5 h-3.5 text-textMuted" />

@@ -44,6 +44,7 @@ export class IncidentOrchestrator {
   
   // Snapshots
   private preInterventionSnapshot: string | null = null;
+  private trueInjectedRoot: { serviceId: string; resourceId: ResourceType; severity: number } | null = null;
 
   // Event sequence
   private sequence: number = 1;
@@ -127,6 +128,7 @@ export class IncidentOrchestrator {
     this.createdAt = Date.now();
     this.sequence = 1;
     this.bundle = this.emptyBundle();
+    this.trueInjectedRoot = null;
     
     this.world = new SimulationWorld(seed, DefaultConfig);
     this.observer = new ObservationAdapter();
@@ -206,6 +208,35 @@ export class IncidentOrchestrator {
     }
   }
 
+  private maybeRefreshPrediction() {
+    if (this.status === 'PREDICTION_LOCKED' || this.status === 'EXPERIMENT_RUNNING' || this.status === 'VALIDATED' || this.status === 'COMPLETED') {
+      return;
+    }
+
+    const topCandidate = this.bundle.causalAnalysis?.topCandidate;
+    if (!topCandidate) return;
+
+    // Avoid freezing a low-confidence, early hypothesis. Keep the draft prediction
+    // aligned with the latest analysis result instead of creating exactly one stale
+    // prediction from the first weak signal.
+    const minConfidence = 0.10;
+    const shouldRefresh =
+      !this.bundle.prediction ||
+      this.bundle.prediction.rootCandidateId !== topCandidate.candidateId ||
+      this.bundle.prediction.confidenceAtPrediction <= minConfidence && topCandidate.confidence > minConfidence ||
+      Math.abs(this.bundle.prediction.confidenceAtPrediction - topCandidate.confidence) > 0.05;
+
+    if (!shouldRefresh || topCandidate.confidence <= minConfidence) return;
+
+    this.bundle.prediction = this.predictionEngine.predict(
+      topCandidate,
+      this.world!,
+      this.baselineMetrics,
+      this.bundle.experimentLog
+    );
+    this.emit('prediction:available', this.bundle.prediction);
+  }
+
   private tickSimulation() {
     if (!this.world || !this.observer || !this.history || !this.analyzer) return;
     this.world.tick();
@@ -214,6 +245,7 @@ export class IncidentOrchestrator {
 
     if (this.playback.tick === 15 && this.scenarioId === 'default_exhaustion') {
       this.world.injectExhaustion('records', 'MEMORY', 'CRITICAL');
+      this.trueInjectedRoot = { serviceId: 'records', resourceId: 'MEMORY', severity: 1 };
     }
     
     const tickData = this.observer.extractObservableTelemetry(this.world);
@@ -248,17 +280,7 @@ export class IncidentOrchestrator {
       const bundle = this.history.getObservableBundle();
       this.bundle.causalAnalysis = this.analyzer.analyze(bundle);
       this.emit('analysis:updated', this.bundle.causalAnalysis);
-
-      // Auto-generate draft prediction if we have a top hypothesis and haven't locked yet
-      if (this.bundle.causalAnalysis.topCandidate && !this.bundle.prediction) {
-        this.bundle.prediction = this.predictionEngine.predict(
-          this.bundle.causalAnalysis.topCandidate,
-          this.world,
-          this.baselineMetrics,
-          this.bundle.experimentLog
-        );
-        this.emit('prediction:available', this.bundle.prediction);
-      }
+      this.maybeRefreshPrediction();
     }
   }
 
@@ -363,11 +385,11 @@ export class IncidentOrchestrator {
     if (this.status !== 'VALIDATED') {
       throw { errorCode: 'INVALID_STATE_TRANSITION', message: 'Cannot reveal ground truth before experiments are validated' };
     }
-    if (!this.world || !this.world.injectedRoot) {
+    const root = this.trueInjectedRoot ?? this.world?.injectedRoot;
+    if (!this.world || !root) {
       throw { errorCode: 'NO_GROUND_TRUTH', message: 'No incident was injected' };
     }
     
-    const root = this.world.injectedRoot;
     const reveal = {
       incidentId: this.incidentId,
       revealedAt: Date.now(),
