@@ -314,14 +314,18 @@ export class IncidentOrchestrator {
   }
 
   public runRootExperiment() {
-    if (this.status !== 'PREDICTION_LOCKED') {
+    if (this.status !== 'PREDICTION_LOCKED' && this.status !== 'VALIDATED') {
       throw { errorCode: 'INVALID_STATE_TRANSITION', message: 'Must lock prediction before running experiments' };
     }
-    if (this.bundle.rootTrajectory) {
-       throw { errorCode: 'EXPERIMENT_ALREADY_RUNNING', message: 'Root experiment already executed' };
+    if (!this.preInterventionSnapshot) {
+      throw { errorCode: 'INVALID_STATE_TRANSITION', message: 'Missing pre-intervention snapshot' };
     }
     
     this.setStatus('EXPERIMENT_RUNNING');
+    
+    // Restore to EXACT pre-intervention snapshot
+    this.world!.restoreSnapshot(this.preInterventionSnapshot);
+
     const action = InterventionRunner.buildRootAction(this.bundle.prediction!, this.world!);
     
     this.emit('experiment:started', { type: 'ROOT', action });
