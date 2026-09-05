@@ -26,7 +26,7 @@ export const CausalAnalysis: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex-1 glass-panel overflow-hidden relative">
+      <div className="flex-1 glass-panel overflow-hidden relative w-full h-full min-h-[450px]">
         <CausalGraph />
       </div>
     </div>

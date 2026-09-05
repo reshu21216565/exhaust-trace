@@ -62,7 +62,7 @@ export const JudgeMode: React.FC = () => {
       </header>
 
       <div className="flex-1 flex overflow-hidden p-6 gap-6">
-        <div className="flex-1 glass-panel overflow-hidden relative shadow-2xl border-primary/20">
+        <div className="flex-1 glass-panel overflow-hidden relative shadow-2xl border-primary/20 w-full h-full min-h-[450px]">
           <div className="absolute top-4 left-4 z-10">
             <h2 className="text-sm font-semibold tracking-wider uppercase mb-1">Causal Architecture</h2>
             <p className="text-xs text-textMuted">Live dependency & propagation visualization</p>

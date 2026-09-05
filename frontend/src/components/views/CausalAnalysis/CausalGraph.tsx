@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useIncident } from '../../../lib/IncidentContext';
 import { useUI } from '../../../lib/UIContext';
 import {
@@ -18,6 +18,22 @@ const nodeTypes = {
 };
 
 const EVENT_WINDOW_TICKS = 30;
+
+const DEFAULT_CANONICAL_GRAPH = {
+  nodes: [
+    { id: 'api_gateway', type: 'service' },
+    { id: 'patient_portal', type: 'service' },
+    { id: 'appointment', type: 'service' },
+    { id: 'notification', type: 'service' },
+    { id: 'records', type: 'service' },
+  ],
+  edges: [
+    { from: 'api_gateway', to: 'patient_portal' },
+    { from: 'patient_portal', to: 'appointment' },
+    { from: 'patient_portal', to: 'notification' },
+    { from: 'appointment', to: 'records' },
+  ]
+};
 
 export const CausalGraph: React.FC = () => {
   const { bundle } = useIncident();
@@ -63,9 +79,11 @@ export const CausalGraph: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  useMemo(() => {
-    if (!dependencyGraph) return;
+  const activeGraph = (dependencyGraph && dependencyGraph.nodes && dependencyGraph.nodes.length > 0)
+    ? dependencyGraph
+    : DEFAULT_CANONICAL_GRAPH;
 
+  useEffect(() => {
     const newNodes: Node[] = [];
     const newEdges: Edge[] = [];
 
@@ -84,9 +102,9 @@ export const CausalGraph: React.FC = () => {
       (p: any) => p.hypothesisId === `${topHypothesis?.serviceId}/${topHypothesis?.resource}`
     )?.nodes;
 
-    dependencyGraph.nodes?.forEach((node: any) => {
+    activeGraph.nodes?.forEach((node: any) => {
       const isTopCandidate = topHypothesis?.serviceId === node.id;
-      const serviceState = currentTelemetry?.services.find((s: any) => s.serviceId === node.id);
+      const serviceState = currentTelemetry?.services?.find((s: any) => s.serviceId === node.id);
       const isEventActive = activeEventNodes.has(node.id);
 
       newNodes.push({
@@ -112,7 +130,7 @@ export const CausalGraph: React.FC = () => {
       });
     });
 
-    dependencyGraph.edges?.forEach((edge: any, i: number) => {
+    activeGraph.edges?.forEach((edge: any, i: number) => {
       let isCausal = false;
       if (topPath) {
         const sourceIndex = topPath.findIndex(p => p.serviceId === edge.from);
@@ -147,7 +165,7 @@ export const CausalGraph: React.FC = () => {
 
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [dependencyGraph, currentTelemetry, causalAnalysis, selectedNodeId, setSelectedNodeId, setNodes, setEdges, activeEventNodes, activeEventEdges]);
+  }, [activeGraph, currentTelemetry, causalAnalysis, selectedNodeId, setSelectedNodeId, setNodes, setEdges, activeEventNodes, activeEventEdges]);
 
   return (
     <>
