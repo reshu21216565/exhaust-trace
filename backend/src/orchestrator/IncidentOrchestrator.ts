@@ -13,6 +13,32 @@ import {
   CheckpointServiceMetrics
 } from '@exhausttrace/shared';
 
+export interface ConfidencePoint {
+  tick: number;
+  topCandidateId: string | null;
+  topCandidateConfidence: number;
+}
+
+export interface BenchmarkRunResult {
+  runNumber: number;
+  seed: string;
+  ticksToDiagnosis: number;
+  topCandidateId: string;
+  confidence: number;
+  isCorrect: boolean;
+  status: string;
+}
+
+export interface BenchmarkResponse {
+  scenarioId: string;
+  totalRuns: number;
+  accuracyPercent: number;
+  avgTicksToDiagnosis: number;
+  fastestRunTicks: number;
+  slowestRunTicks: number;
+  runs: BenchmarkRunResult[];
+}
+
 type EventPublisher = (event: IncidentWsEvent) => void;
 
 export class IncidentOrchestrator {
@@ -41,6 +67,9 @@ export class IncidentOrchestrator {
   private validator: InterventionValidator = new InterventionValidator();
   
   private bundle: Omit<IncidentEvidenceBundle, 'incidentId' | 'sessionId' | 'scenarioId' | 'status' | 'createdAt' | 'playback'> = this.emptyBundle();
+
+  // Confidence history — one point per analysis update
+  private confidenceHistory: ConfidencePoint[] = [];
   
   // Snapshots
   private preInterventionSnapshot: string | null = null;
@@ -129,6 +158,7 @@ export class IncidentOrchestrator {
     this.createdAt = Date.now();
     this.sequence = 1;
     this.bundle = this.emptyBundle();
+    this.confidenceHistory = [];
     this.trueInjectedRoot = null;
     
     this.world = new SimulationWorld(seed, DefaultConfig);
@@ -292,7 +322,19 @@ export class IncidentOrchestrator {
     if (this.playback.tick > 10 && this.playback.tick % 5 === 0 && this.status !== 'PREDICTION_LOCKED' && this.status !== 'EXPERIMENT_RUNNING') {
       const bundle = this.history.getObservableBundle();
       this.bundle.causalAnalysis = this.analyzer.analyze(bundle);
+      // Track confidence history for the Confidence tab chart
+      const topC = this.bundle.causalAnalysis?.topCandidate;
+      this.confidenceHistory.push({
+        tick: this.playback.tick,
+        topCandidateId: topC ? `${topC.serviceId}/${topC.resource}` : null,
+        topCandidateConfidence: topC ? topC.confidence : 0
+      });
       this.emit('analysis:updated', this.bundle.causalAnalysis);
+      this.emit('confidence:updated', {
+        tick: this.playback.tick,
+        topCandidateId: topC ? `${topC.serviceId}/${topC.resource}` : null,
+        topCandidateConfidence: topC ? topC.confidence : 0
+      });
       this.maybeRefreshPrediction();
     }
   }
@@ -437,5 +479,192 @@ export class IncidentOrchestrator {
       playback: this.playback,
       ...this.bundle
     };
+  }
+
+  public getConfidenceHistory(): ConfidencePoint[] {
+    return this.confidenceHistory;
+  }
+
+  /**
+   * Isolated benchmark runner — synchronously ticks a fresh world N times.
+   * Returns accuracy data without touching the live orchestrator state.
+   */
+  public static runBenchmarkScenario(
+    scenarioId: string,
+    runCount: number
+  ): BenchmarkResponse {
+    // Resolve injection params from scenarioId
+    const SCENARIO_MAP: Record<string, { serviceId: string; resource: ResourceType; severity: string }> = {
+      default_exhaustion:            { serviceId: 'records',     resource: 'MEMORY',      severity: 'CRITICAL' },
+      records_memory_critical:       { serviceId: 'records',     resource: 'MEMORY',      severity: 'CRITICAL' },
+      records_cpu_critical:          { serviceId: 'records',     resource: 'CPU',         severity: 'CRITICAL' },
+      records_connections_critical:  { serviceId: 'records',     resource: 'CONNECTIONS', severity: 'CRITICAL' },
+      records_workers_critical:      { serviceId: 'records',     resource: 'WORKERS',     severity: 'CRITICAL' },
+      appointment_memory_critical:   { serviceId: 'appointment', resource: 'MEMORY',      severity: 'CRITICAL' },
+      appointment_cpu_critical:      { serviceId: 'appointment', resource: 'CPU',         severity: 'CRITICAL' },
+      appointment_connections_critical: { serviceId: 'appointment', resource: 'CONNECTIONS', severity: 'CRITICAL' },
+      appointment_workers_critical:  { serviceId: 'appointment', resource: 'WORKERS',     severity: 'CRITICAL' },
+      custom_portal_cpu:             { serviceId: 'portal',      resource: 'CPU',         severity: 'CRITICAL' },
+      custom_records_connections:    { serviceId: 'records',     resource: 'CONNECTIONS', severity: 'HIGH' },
+    };
+
+    const params = SCENARIO_MAP[scenarioId] ?? SCENARIO_MAP['default_exhaustion'];
+    const runs: BenchmarkRunResult[] = [];
+    const MAX_TICKS = 80;
+
+    for (let i = 1; i <= runCount; i++) {
+      const seed = `bench-${scenarioId}-run${i}-${Date.now()}`;
+      const world = new SimulationWorld(seed, DefaultConfig);
+      const observer = new ObservationAdapter();
+      const history = new ObservationHistory(observer.extractDependencyGraph(world));
+      const analyzer = new CausalAnalyzer();
+
+      let baseCapacities: Record<string, number> = {};
+      let baseLatencies: Record<string, number> = {};
+      world.nodes.forEach((node, sid) => {
+        baseCapacities[sid] = node.state.params.baseCapacity;
+        baseLatencies[sid] = node.state.params.baseLatency;
+      });
+
+      let injected = false;
+      let diagnosisTick = MAX_TICKS;
+      let finalTopCandidate: any = null;
+      const CONFIDENCE_THRESHOLD = 0.65;
+
+      for (let tick = 1; tick <= MAX_TICKS; tick++) {
+        world.tick();
+
+        // Inject at tick 15
+        if (tick === 15 && !injected) {
+          world.injectExhaustion(params.serviceId, params.resource, params.severity);
+          injected = true;
+        }
+
+        const tickData = observer.extractObservableTelemetry(world);
+        const events = observer.generateEvents(tickData, observer.extractDependencyGraph(world), baseCapacities, baseLatencies);
+        history.appendTelemetry(tickData);
+        history.appendEvents(events);
+
+        if (tick > 15 && tick % 5 === 0) {
+          const obsBundle = history.getObservableBundle();
+          const analysis = analyzer.analyze(obsBundle);
+          if (analysis?.topCandidate && analysis.topCandidate.confidence >= CONFIDENCE_THRESHOLD) {
+            finalTopCandidate = analysis.topCandidate;
+            diagnosisTick = tick;
+            break;
+          }
+          if (tick === MAX_TICKS && analysis?.topCandidate) {
+            finalTopCandidate = analysis.topCandidate;
+          }
+        }
+      }
+
+      const topId = finalTopCandidate
+        ? `${finalTopCandidate.serviceId}/${finalTopCandidate.resource}`
+        : 'UNRESOLVED';
+      const isCorrect = finalTopCandidate
+        ? finalTopCandidate.serviceId === params.serviceId && finalTopCandidate.resource === params.resource
+        : false;
+
+      runs.push({
+        runNumber: i,
+        seed,
+        ticksToDiagnosis: diagnosisTick,
+        topCandidateId: topId,
+        confidence: finalTopCandidate ? Math.round(finalTopCandidate.confidence * 100) : 0,
+        isCorrect,
+        status: isCorrect ? 'CORRECT' : 'INCORRECT'
+      });
+    }
+
+    const correctRuns = runs.filter(r => r.isCorrect);
+    const accuracyPercent = Math.round((correctRuns.length / runs.length) * 100);
+    const tickCounts = runs.map(r => r.ticksToDiagnosis);
+    const avgTicksToDiagnosis = Math.round(tickCounts.reduce((a, b) => a + b, 0) / tickCounts.length);
+    const fastestRunTicks = Math.min(...tickCounts);
+    const slowestRunTicks = Math.max(...tickCounts);
+
+    return {
+      scenarioId,
+      totalRuns: runs.length,
+      accuracyPercent,
+      avgTicksToDiagnosis,
+      fastestRunTicks,
+      slowestRunTicks,
+      runs
+    };
+  }
+
+  /**
+   * Isolated concurrent runner — spins up 2 independent worlds, runs each to 80 ticks,
+   * returns both bundles without contaminating the live orchestrator.
+   */
+  public static runConcurrentScenarios(
+    configA: { serviceId: string; resource: ResourceType; severity: string },
+    configB: { serviceId: string; resource: ResourceType; severity: string }
+  ): { incidentA: IncidentEvidenceBundle; incidentB: IncidentEvidenceBundle } {
+    const runOne = (cfg: { serviceId: string; resource: ResourceType; severity: string }, label: string): IncidentEvidenceBundle => {
+      const seed = `conc-${cfg.serviceId}-${cfg.resource}-${label}-${Date.now()}`;
+      const world = new SimulationWorld(seed, DefaultConfig);
+      const observer = new ObservationAdapter();
+      const depGraph = observer.extractDependencyGraph(world);
+      const history = new ObservationHistory(depGraph);
+      const analyzer = new CausalAnalyzer();
+
+      let baseCapacities: Record<string, number> = {};
+      let baseLatencies: Record<string, number> = {};
+      world.nodes.forEach((node, sid) => {
+        baseCapacities[sid] = node.state.params.baseCapacity;
+        baseLatencies[sid] = node.state.params.baseLatency;
+      });
+
+      let allEvents: any[] = [];
+      let allTelemetry: any[] = [];
+      let finalAnalysis: any = null;
+
+      const MAX_TICKS = 60;
+      for (let tick = 1; tick <= MAX_TICKS; tick++) {
+        world.tick();
+        if (tick === 15) {
+          world.injectExhaustion(cfg.serviceId, cfg.resource, cfg.severity);
+        }
+        const tickData = observer.extractObservableTelemetry(world);
+        const events = observer.generateEvents(tickData, depGraph, baseCapacities, baseLatencies);
+        history.appendTelemetry(tickData);
+        history.appendEvents(events);
+        allEvents.push(...events);
+        allTelemetry.push(tickData);
+
+        if (tick > 15 && tick % 5 === 0) {
+          const obsBundle = history.getObservableBundle();
+          finalAnalysis = analyzer.analyze(obsBundle);
+        }
+      }
+
+      const incidentId = `conc-${label}-${Date.now()}`;
+      return {
+        incidentId,
+        sessionId: incidentId,
+        scenarioId: `${cfg.serviceId}_${cfg.resource}_${cfg.severity}`,
+        status: 'COMPLETED' as IncidentSessionStatus,
+        createdAt: Date.now(),
+        playback: { isRunning: false, speed: 1, tick: MAX_TICKS, timestamp: Date.now() },
+        dependencyGraph: depGraph,
+        currentTelemetry: allTelemetry[allTelemetry.length - 1] ?? null,
+        telemetryHistory: allTelemetry.slice(-50),
+        events: allEvents.slice(-200),
+        causalAnalysis: finalAnalysis,
+        prediction: null,
+        rootTrajectory: null,
+        rootValidation: null,
+        symptomTrajectory: null,
+        symptomValidation: null,
+        experimentLog: []
+      };
+    };
+
+    const incidentA = runOne(configA, 'A');
+    const incidentB = runOne(configB, 'B');
+    return { incidentA, incidentB };
   }
 }

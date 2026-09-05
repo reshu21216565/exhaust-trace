@@ -274,6 +274,40 @@ export function createApiRouter(orchestrator: IncidentOrchestrator): Router {
     res.type('text/plain').send(answer);
   }));
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Confidence History — real-time Bayesian curve data
+  // ─────────────────────────────────────────────────────────────────────────
+  router.get('/incident/confidence-history', asyncHandler(async (_req: Request, res: Response) => {
+    const history = orchestrator.getConfidenceHistory();
+    res.json({ confidenceHistory: history });
+  }));
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Benchmark — Monte-Carlo batch runner (isolated, non-blocking)
+  // ─────────────────────────────────────────────────────────────────────────
+  router.post('/incident/benchmark', asyncHandler(async (req: Request, res: Response) => {
+    const { scenarioId, runCount } = req.body;
+    if (!scenarioId) throw { errorCode: 'BAD_REQUEST', message: 'scenarioId is required' };
+    const count = Math.min(Math.max(Number(runCount) || 5, 1), 25); // cap at 25 runs
+    const result = IncidentOrchestrator.runBenchmarkScenario(scenarioId, count);
+    res.json(result);
+  }));
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Concurrent — dual isolated incident orchestrators
+  // ─────────────────────────────────────────────────────────────────────────
+  router.post('/incident/concurrent-start', asyncHandler(async (req: Request, res: Response) => {
+    const { serviceA, resourceA, severityA, serviceB, resourceB, severityB } = req.body;
+    if (!serviceA || !resourceA || !serviceB || !resourceB) {
+      throw { errorCode: 'BAD_REQUEST', message: 'serviceA, resourceA, serviceB, resourceB are required' };
+    }
+    const result = IncidentOrchestrator.runConcurrentScenarios(
+      { serviceId: serviceA, resource: resourceA, severity: severityA || 'CRITICAL' },
+      { serviceId: serviceB, resource: resourceB, severity: severityB || 'CRITICAL' }
+    );
+    res.json(result);
+  }));
+
   // Error handler middleware
   router.use((err: any, req: Request, res: Response, next: NextFunction) => {
     const errorCode = err.errorCode || 'INTERNAL_ERROR';

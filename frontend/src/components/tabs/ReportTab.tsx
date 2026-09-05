@@ -6,17 +6,18 @@ import type { ObservableSystemEvent } from '@exhausttrace/shared';
 
 export const ReportTab: React.FC = () => {
   const { bundle, startIncident } = useIncident();
+  const isLive = bundle?.playback.isRunning ?? false;
 
-  if (!bundle || (bundle.events.length === 0 && !bundle.causalAnalysis)) {
+  if (!bundle) {
     return (
       <div className="flex-1 p-8 overflow-y-auto bg-background flex flex-col items-center justify-center">
         <div className="max-w-md w-full glass-panel p-8 text-center flex flex-col items-center">
           <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
             <FileText className="w-8 h-8 text-primary" />
           </div>
-          <h2 className="text-xl font-bold text-textMain mb-2 tracking-wide">NO COMPLETED INCIDENT REPORT</h2>
+          <h2 className="text-xl font-bold text-textMain mb-2 tracking-wide">NO INCIDENT SESSION</h2>
           <p className="text-sm text-textMuted mb-6 leading-relaxed">
-            No incident session data has been generated yet. Start an incident simulation and run analysis to produce an end-to-end evidence & diagnosis report.
+            No incident session has been started yet. Start a simulation to generate a live diagnostic report.
           </p>
           <button
             onClick={() => startIncident()}
@@ -127,16 +128,22 @@ export const ReportTab: React.FC = () => {
       {/* Top Header Card */}
       <div className="glass-panel p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-2 flex-wrap">
             <span className="px-2.5 py-1 rounded text-xs font-mono font-bold bg-primary/20 text-primary border border-primary/30">
               REPORT #{bundle.incidentId || 'DRAFT'}
             </span>
             <span className={clsx(
-              "px-2.5 py-1 rounded text-xs font-mono font-bold uppercase",
-              bundle.status === 'COMPLETED' ? "bg-healthy/10 text-healthy border border-healthy/20" : "bg-info/10 text-info border border-info/20"
+              'px-2.5 py-1 rounded text-xs font-mono font-bold uppercase',
+              bundle.status === 'COMPLETED' ? 'bg-healthy/10 text-healthy border border-healthy/20' : 'bg-info/10 text-info border border-info/20'
             )}>
               {bundle.status}
             </span>
+            {isLive && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-bold border bg-critical/10 text-critical border-critical/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-critical animate-pulse" />
+                LIVE
+              </span>
+            )}
           </div>
           <h1 className="text-2xl font-bold text-textMain tracking-tight">Incident Diagnostic Summary</h1>
           <p className="text-xs text-textMuted font-mono mt-1">Scenario: {bundle.scenarioId} | Created: {createdDate}</p>
