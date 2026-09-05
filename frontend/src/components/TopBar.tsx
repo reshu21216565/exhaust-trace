@@ -33,7 +33,7 @@ export const TopBar: React.FC = () => {
 
         <div className="flex items-center gap-2 text-xs">
           <div className={clsx("w-2 h-2 rounded-full", isConnected ? "bg-healthy" : "bg-critical animate-pulse")} />
-          <span className="text-textMuted uppercase tracking-wider">{isConnected ? 'Live' : 'Disconnected'}</span>
+          <span className="text-textMuted uppercase tracking-wider">{isConnected ? 'Live' : 'Reconnecting...'}</span>
         </div>
       </div>
 

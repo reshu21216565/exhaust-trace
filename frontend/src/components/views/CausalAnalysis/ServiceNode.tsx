@@ -4,7 +4,7 @@ import { clsx } from 'clsx';
 import { Server, Activity, ArrowRight } from 'lucide-react';
 
 export const ServiceNode: React.FC<any> = ({ data }) => {
-  const { serviceId, metrics, resources, isTopCandidate, isSelected, onSelect } = data;
+  const { serviceId, metrics, resources, isTopCandidate, isSelected, isEventActive, onSelect } = data;
 
   const getStatusColor = (health: string) => {
     switch (health) {
@@ -54,8 +54,10 @@ export const ServiceNode: React.FC<any> = ({ data }) => {
         className={clsx(
           "w-[260px] glass-panel p-4 cursor-pointer transition-all duration-200 select-none",
           isSelected ? "ring-2 ring-primary bg-surfaceHover shadow-xl" : "hover:border-primary/50",
-          isTopCandidate && !isSelected && "ring-1 ring-degraded shadow-[0_0_15px_rgba(249,115,22,0.15)]"
+          isTopCandidate && !isSelected && "ring-1 ring-degraded shadow-[0_0_15px_rgba(249,115,22,0.15)]",
+          isEventActive && "ring-2 ring-yellow-400 shadow-[0_0_18px_rgba(251,191,36,0.75)]"
         )}
+        style={isEventActive ? { borderColor: '#FBBF24', backgroundColor: 'rgba(30, 41, 59, 0.95)' } : undefined}
       >
         <div className="flex items-center justify-between mb-3 border-b border-border pb-3">
           <div className="flex items-center gap-2">

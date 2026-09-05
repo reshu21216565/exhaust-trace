@@ -11,6 +11,7 @@ interface IncidentContextState {
   bundle: IncidentEvidenceBundle | null;
   groundTruth: GroundTruthReveal | null;
   startIncident: (scenarioId?: string, seed?: string) => Promise<void>;
+  startCustomIncident: (serviceId: string, resource: string, severity: string, seed?: string) => Promise<void>;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   step: () => Promise<void>;
@@ -51,6 +52,7 @@ export const IncidentProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const newSocket = io(SOCKET_URL);
 
     newSocket.on('connect', () => setIsConnected(true));
+    newSocket.on('connect_error', () => setIsConnected(false));
     newSocket.on('disconnect', () => setIsConnected(false));
 
     newSocket.on('incident:state', (wrapper: any) => {
@@ -152,6 +154,12 @@ export const IncidentProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setGroundTruth(null);
   }, [action]);
 
+  const startCustomIncident = useCallback(async (serviceId: string, resource: string, severity: string, seed?: string) => {
+    const data = await action('/incident/start-custom', { serviceId, resource, severity, seed });
+    setBundle(data);
+    setGroundTruth(null);
+  }, [action]);
+
   const pause = useCallback(() => action('/incident/pause'), [action]);
   const resume = useCallback(() => action('/incident/resume'), [action]);
   const step = useCallback(() => action('/incident/step'), [action]);
@@ -179,6 +187,7 @@ export const IncidentProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       bundle,
       groundTruth,
       startIncident,
+      startCustomIncident,
       pause,
       resume,
       step,

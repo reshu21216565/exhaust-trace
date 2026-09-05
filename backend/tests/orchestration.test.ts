@@ -234,6 +234,7 @@ describe('Block 5: Orchestration & API', () => {
       const canonicalSeed = 'test-canonical-seed';
       // Start session A
       await request(app).post(getUrl('/incident/start')).send({ scenarioId: 'default_exhaustion', seed: canonicalSeed });
+      await request(app).post(getUrl('/incident/pause'));
       for(let i=0; i<15; i++) {
         await request(app).post(getUrl('/incident/step'));
       }
@@ -242,6 +243,7 @@ describe('Block 5: Orchestration & API', () => {
 
       // Reset
       await request(app).post(getUrl('/incident/reset'));
+      await request(app).post(getUrl('/incident/pause'));
       for(let i=0; i<15; i++) {
         await request(app).post(getUrl('/incident/step'));
       }

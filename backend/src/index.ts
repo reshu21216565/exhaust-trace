@@ -1,7 +1,20 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { createApiRouter } from './api/routes';
+
+const possibleEnvPaths = [
+  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '../../.env'),
+  path.resolve(process.cwd(), '.env')
+];
+const envPath = possibleEnvPaths.find(file => fs.existsSync(file));
+if (envPath) {
+  dotenv.config({ path: envPath });
+}
 import { SocketServer } from './api/socket';
 import { IncidentOrchestrator } from './orchestrator/IncidentOrchestrator';
 

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useIncident } from '../../../lib/IncidentContext';
 import { FastForward, Lock } from 'lucide-react';
 import { PredictionCard } from './PredictionCard';
 
 export const Prediction: React.FC = () => {
   const { bundle, lockPrediction } = useIncident();
+  const [isLockingPrediction, setIsLockingPrediction] = useState(false);
 
   if (!bundle) return null;
 
@@ -44,11 +45,20 @@ export const Prediction: React.FC = () => {
         {!isLocked && (
           <div className="flex justify-center">
             <button
-              onClick={lockPrediction}
-              className="px-8 py-4 bg-primary hover:bg-primaryHover text-white rounded-lg shadow-lg font-bold tracking-widest flex items-center gap-3 transition-colors"
+              onClick={async () => {
+                if (isLockingPrediction) return;
+                setIsLockingPrediction(true);
+                try {
+                  await lockPrediction();
+                } finally {
+                  setIsLockingPrediction(false);
+                }
+              }}
+              disabled={isLockingPrediction}
+              className="px-8 py-4 bg-primary hover:bg-primaryHover disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg shadow-lg font-bold tracking-widest flex items-center gap-3 transition-colors"
             >
               <Lock className="w-5 h-5" />
-              FREEZE PREDICTION BEFORE INTERVENTION
+              {isLockingPrediction ? 'LOCKING PREDICTION...' : 'FREEZE PREDICTION BEFORE INTERVENTION'}
             </button>
           </div>
         )}

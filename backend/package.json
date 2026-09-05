@@ -1,7 +1,10 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "start": "node dist/src/index.js"
+  },
   "dependencies": {
     "@exhausttrace/analysis": "*",
     "@exhausttrace/observation": "*",
@@ -9,6 +12,7 @@
     "@exhausttrace/shared": "*",
     "@exhausttrace/simulation": "*",
     "cors": "^2.8.6",
+    "dotenv": "^17.0.0",
     "express": "^5.2.1",
     "socket.io": "^4.8.3"
   },

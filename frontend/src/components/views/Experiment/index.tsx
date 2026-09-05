@@ -1,12 +1,53 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useIncident } from '../../../lib/IncidentContext';
-import { Beaker, ShieldAlert, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Beaker, ShieldAlert, CheckCircle2, RotateCcw, TrendingDown } from 'lucide-react';
+import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+
+const summarizeTrajectory = (trajectory: any) => {
+  if (!trajectory?.checkpoints?.length) return [];
+
+  return trajectory.checkpoints.map((checkpoint: any) => {
+    const metrics = Object.values(checkpoint.metrics ?? {}) as any[];
+    const latency = metrics.reduce((sum, svc) => sum + (svc?.latencyMs ?? 0), 0) / Math.max(metrics.length, 1);
+    const queue = metrics.reduce((sum, svc) => sum + (svc?.queueDepth ?? 0), 0) / Math.max(metrics.length, 1);
+    return {
+      tick: checkpoint.relativeTick,
+      impact: latency + queue * 2,
+      avgLatency: latency,
+      avgQueue: queue,
+    };
+  });
+};
 
 export const Experiment: React.FC = () => {
   const { bundle, runRootExperiment, runSymptomExperiment } = useIncident();
   const [symptomService, setSymptomService] = useState('api_gateway');
   const [symptomResource, setSymptomResource] = useState('MEMORY');
   const [showConfirmSymptom, setShowConfirmSymptom] = useState(false);
+  const [isRunningRootExperiment, setIsRunningRootExperiment] = useState(false);
+
+  const rootReplay = useMemo(() => summarizeTrajectory(bundle?.rootTrajectory), [bundle?.rootTrajectory]);
+  const symptomReplay = useMemo(() => summarizeTrajectory(bundle?.symptomTrajectory), [bundle?.symptomTrajectory]);
+
+  const rootState = useMemo(() => {
+    if (!rootReplay.length) return { label: 'Awaiting experiment', tone: 'text-textMuted' };
+    const first = rootReplay[0]?.impact ?? 0;
+    const last = rootReplay[rootReplay.length - 1]?.impact ?? 0;
+    const collapsed = last <= first * 0.7;
+    return collapsed
+      ? { label: 'COLLAPSED', tone: 'text-healthy' }
+      : { label: 'PARTIAL', tone: 'text-degraded' };
+  }, [rootReplay]);
+
+  const symptomState = useMemo(() => {
+    if (!symptomReplay.length) return { label: 'Run a symptom experiment to compare', tone: 'text-textMuted' };
+    const first = symptomReplay[0]?.impact ?? 0;
+    const last = symptomReplay[symptomReplay.length - 1]?.impact ?? 0;
+    const persisted = last > first * 0.85;
+    return persisted
+      ? { label: 'PERSISTED', tone: 'text-degraded' }
+      : { label: 'PARTIAL', tone: 'text-elevated' };
+  }, [symptomReplay]);
 
   if (!bundle || !bundle.prediction) {
     return (
@@ -64,12 +105,20 @@ export const Experiment: React.FC = () => {
 
           {!hasRootValidation ? (
             <button
-              onClick={runRootExperiment}
-              disabled={isRunning || status === 'IDLE' || status === 'RUNNING'}
+              onClick={async () => {
+                if (isRunningRootExperiment || isRunning) return;
+                setIsRunningRootExperiment(true);
+                try {
+                  await runRootExperiment();
+                } finally {
+                  setIsRunningRootExperiment(false);
+                }
+              }}
+              disabled={isRunningRootExperiment || isRunning || status === 'IDLE' || status === 'RUNNING'}
               className="w-full py-4 bg-primary hover:bg-primaryHover disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold tracking-widest transition-colors flex justify-center items-center gap-2"
             >
-              {isRunning ? <RotateCcw className="w-5 h-5 animate-spin" /> : <Beaker className="w-5 h-5" />}
-              {isRunning ? 'EXPERIMENT RUNNING...' : 'RUN ROOT EXPERIMENT'}
+              {isRunningRootExperiment || isRunning ? <RotateCcw className="w-5 h-5 animate-spin" /> : <Beaker className="w-5 h-5" />}
+              {isRunningRootExperiment || isRunning ? 'EXPERIMENT RUNNING...' : 'RUN ROOT EXPERIMENT'}
             </button>
           ) : (
             <div className="w-full py-4 bg-surface border border-healthy/30 text-healthy rounded-lg font-bold tracking-widest flex justify-center items-center gap-2">
@@ -159,6 +208,90 @@ export const Experiment: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="glass-panel p-6 border-t-4 border-t-info">
+        <div className="flex items-center gap-3 mb-6">
+          <TrendingDown className="w-6 h-6 text-info" />
+          <div>
+            <h3 className="text-lg font-bold tracking-wide uppercase">Counterfactual Replay</h3>
+            <p className="text-xs text-textMuted mt-1">Compare the true-origin relief against a symptomatic-service intervention</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <div className="rounded-lg border border-border bg-surface/50 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-textMuted">Left panel</p>
+                <h4 className="text-sm font-bold">Relief at true origin</h4>
+              </div>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${rootState.tone}`}>{rootState.label}</span>
+            </div>
+            {rootReplay.length ? (
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={rootReplay}>
+                    <defs>
+                      <linearGradient id="rootReplayFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#22C55E" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#22C55E" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="tick" hide />
+                    <YAxis hide domain={['auto', 'auto']} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }}
+                      labelStyle={{ color: '#9CA3AF', fontSize: '12px' }}
+                      itemStyle={{ color: '#F9FAFB', fontSize: '12px', fontFamily: 'monospace' }}
+                    />
+                    <Area type="monotone" dataKey="impact" stroke="#22C55E" strokeWidth={3} fill="url(#rootReplayFill)" isAnimationActive />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-lg text-xs text-textMuted">
+                Awaiting root experiment data
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-border bg-surface/50 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-textMuted">Right panel</p>
+                <h4 className="text-sm font-bold">Relief at a symptomatic service</h4>
+              </div>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${symptomState.tone}`}>{symptomState.label}</span>
+            </div>
+            {symptomReplay.length ? (
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={symptomReplay}>
+                    <defs>
+                      <linearGradient id="symptomReplayFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#F97316" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#F97316" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="tick" hide />
+                    <YAxis hide domain={['auto', 'auto']} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '8px' }}
+                      labelStyle={{ color: '#9CA3AF', fontSize: '12px' }}
+                      itemStyle={{ color: '#F9FAFB', fontSize: '12px', fontFamily: 'monospace' }}
+                    />
+                    <Area type="monotone" dataKey="impact" stroke="#F97316" strokeWidth={3} fill="url(#symptomReplayFill)" isAnimationActive />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-48 flex items-center justify-center border border-dashed border-border rounded-lg text-xs text-textMuted">
+                Run a symptom experiment to compare
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

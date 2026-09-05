@@ -45,6 +45,7 @@ export class IncidentOrchestrator {
   // Snapshots
   private preInterventionSnapshot: string | null = null;
   private trueInjectedRoot: { serviceId: string; resourceId: ResourceType; severity: number } | null = null;
+  private pendingCustomInjection: { serviceId: string; resourceId: ResourceType; severity: string } | null = null;
 
   // Event sequence
   private sequence: number = 1;
@@ -153,6 +154,11 @@ export class IncidentOrchestrator {
     this.resume();
   }
 
+  public startCustomScenario(serviceId: string, resourceId: ResourceType, severity: string, seed: string = `seed-${Date.now()}`) {
+    this.pendingCustomInjection = { serviceId, resourceId, severity };
+    this.startScenario('custom_exhaustion', seed);
+  }
+
   public reset() {
     if (this.status === 'EXPERIMENT_RUNNING') {
       throw { errorCode: 'INVALID_STATE_TRANSITION', message: 'Cannot reset during an active experiment' };
@@ -246,6 +252,13 @@ export class IncidentOrchestrator {
     if (this.playback.tick === 15 && this.scenarioId === 'default_exhaustion') {
       this.world.injectExhaustion('records', 'MEMORY', 'CRITICAL');
       this.trueInjectedRoot = { serviceId: 'records', resourceId: 'MEMORY', severity: 1 };
+    }
+
+    if (this.playback.tick === 15 && this.pendingCustomInjection) {
+      const custom = this.pendingCustomInjection;
+      this.world.injectExhaustion(custom.serviceId, custom.resourceId, custom.severity);
+      this.trueInjectedRoot = { serviceId: custom.serviceId, resourceId: custom.resourceId, severity: 1 };
+      this.pendingCustomInjection = null;
     }
     
     const tickData = this.observer.extractObservableTelemetry(this.world);
