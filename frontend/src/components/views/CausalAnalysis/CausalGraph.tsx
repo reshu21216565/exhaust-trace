@@ -54,6 +54,7 @@ export const CausalGraph: React.FC = () => {
     dependencyGraph.nodes?.forEach((node: any) => {
       const isTopCandidate = topHypothesis?.serviceId === node.id;
       const serviceState = currentTelemetry?.services.find((s: any) => s.serviceId === node.id);
+
       newNodes.push({
         id: node.id,
         type: 'serviceNode',

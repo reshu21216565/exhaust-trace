@@ -1,13 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
-import type { 
-  IncidentEvidenceBundle, 
+import type {
+  IncidentEvidenceBundle,
   IncidentSessionStatus,
-  CounterfactualPrediction,
   GroundTruthReveal,
-  TelemetryTick,
-  ObservableSystemEvent,
-  CausalAnalysisResult,
 } from '@exhausttrace/shared';
 
 interface IncidentContextState {
