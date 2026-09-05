@@ -4,6 +4,7 @@
 
 @layer base {
   body {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
     @apply bg-background text-textMain antialiased;
   }
 }
@@ -35,11 +36,21 @@
   }
 
   .glass-panel {
-    @apply bg-surface/80 backdrop-blur-md border border-border rounded-xl shadow-lg;
+    background: rgba(11, 17, 27, 0.65);
+    backdrop-filter: blur(14px) saturate(130%);
+    -webkit-backdrop-filter: blur(14px) saturate(130%);
+    border: 1px solid rgba(0, 229, 255, 0.22);
+    border-radius: 0.5rem;
+    box-shadow:
+      0 0 20px rgba(0, 229, 255, 0.12),
+      inset 0 0 40px rgba(0, 229, 255, 0.04);
   }
   
   .glass-header {
-    @apply bg-background/90 backdrop-blur-sm border-b border-border;
+    background: rgba(8, 13, 19, 0.90);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(0, 229, 255, 0.20);
   }
 
   .enter-btn {
