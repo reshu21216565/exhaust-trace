@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { createApiRouter } from './api/routes';
+import { createExtraApiRouter } from './api/extraRoutes';
 
 const possibleEnvPaths = [
   path.resolve(__dirname, '../.env'),
@@ -31,6 +32,7 @@ export function createApplication() {
   });
 
   app.use('/api/v1', createApiRouter(orchestrator));
+  app.use('/api/v1', createExtraApiRouter(orchestrator));
 
   return { app, server, orchestrator, socketServer };
 }

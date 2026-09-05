@@ -7,6 +7,11 @@ import { Prediction } from './views/Prediction';
 import { Experiment } from './views/Experiment';
 import { Validation } from './views/Validation';
 import { Timeline } from './views/Timeline';
+import { ReportTab } from './tabs/ReportTab';
+import { ConfidenceTab } from './tabs/ConfidenceTab';
+import { BenchmarkTab } from './tabs/BenchmarkTab';
+import { ConcurrentTab } from './tabs/ConcurrentTab';
+import { AnalystVoiceTab } from './tabs/AnalystVoiceTab';
 
 export const MainWorkspace: React.FC = () => {
   const { activeTab } = useUI();
@@ -20,6 +25,11 @@ export const MainWorkspace: React.FC = () => {
       {activeTab === 'Experiment' && <Experiment />}
       {activeTab === 'Validation' && <Validation />}
       {activeTab === 'Timeline' && <Timeline />}
+      {activeTab === 'Report' && <ReportTab />}
+      {activeTab === 'Confidence' && <ConfidenceTab />}
+      {activeTab === 'Benchmark' && <BenchmarkTab />}
+      {activeTab === 'Concurrent' && <ConcurrentTab />}
+      {activeTab === 'Analyst Voice' && <AnalystVoiceTab />}
     </main>
   );
 };

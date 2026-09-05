@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-export type ViewTab = 'Overview' | 'Causal Analysis' | 'Evidence' | 'Prediction' | 'Experiment' | 'Validation' | 'Timeline';
+export type ViewTab = 'Overview' | 'Causal Analysis' | 'Evidence' | 'Prediction' | 'Experiment' | 'Validation' | 'Timeline' | 'Report' | 'Confidence' | 'Benchmark' | 'Concurrent' | 'Analyst Voice';
 
 interface UIContextState {
   activeTab: ViewTab;

@@ -2,7 +2,7 @@ import React from 'react';
 import { useUI } from '../lib/UIContext';
 import type { ViewTab } from '../lib/UIContext';
 import { useIncident } from '../lib/IncidentContext';
-import { LayoutDashboard, Network, Database, FastForward, Beaker, CheckCircle2, Clock } from 'lucide-react';
+import { LayoutDashboard, Network, Database, FastForward, Beaker, CheckCircle2, Clock, FileText, TrendingUp, Layers, GitFork, Volume2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const navItems: { label: ViewTab; icon: React.FC<any> }[] = [
@@ -13,6 +13,11 @@ const navItems: { label: ViewTab; icon: React.FC<any> }[] = [
   { label: 'Experiment', icon: Beaker },
   { label: 'Validation', icon: CheckCircle2 },
   { label: 'Timeline', icon: Clock },
+  { label: 'Report', icon: FileText },
+  { label: 'Confidence', icon: TrendingUp },
+  { label: 'Benchmark', icon: Layers },
+  { label: 'Concurrent', icon: GitFork },
+  { label: 'Analyst Voice', icon: Volume2 },
 ];
 
 export const LeftNav: React.FC = () => {
