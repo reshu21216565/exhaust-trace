@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/shared" },
+    { "path": "./packages/simulation" },
+    { "path": "./packages/observation" },
+    { "path": "./packages/analysis" },
+    { "path": "./packages/prediction" },
+    { "path": "./backend" }
+  ]
+}

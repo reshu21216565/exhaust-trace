@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-textMain antialiased;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-surface/80 backdrop-blur-md border border-border rounded-xl shadow-lg;
+  }
+  
+  .glass-header {
+    @apply bg-background/90 backdrop-blur-sm border-b border-border;
+  }
+}
+
+/* React Flow customizations */
+.react-flow__node {
+  border-radius: 8px;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__controls {
+  @apply !bg-surface !border-border !shadow-md;
+}
+
+.react-flow__controls-button {
+  @apply !bg-surface !border-border !fill-textMain hover:!bg-surfaceHover;
+}
+
+.react-flow__attribution {
+  @apply !bg-transparent !text-textMuted/50;
+}

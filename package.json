@@ -1,0 +1,24 @@
+{
+  "name": "exhausttrace",
+  "version": "1.0.0",
+  "description": "ExhaustTrace - Resource Exhaustion Cascade Reconstruction",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^20.19.43",
+    "eslint": "^10.10.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^1.6.1"
+  }
+}

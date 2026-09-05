@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*"],
+  "references": [
+    { "path": "../packages/shared" },
+    { "path": "../packages/simulation" },
+    { "path": "../packages/observation" },
+    { "path": "../packages/analysis" },
+    { "path": "../packages/prediction" }
+  ]
+}
