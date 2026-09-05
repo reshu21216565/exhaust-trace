@@ -4,37 +4,45 @@ import { clsx } from 'clsx';
 import { Server, Activity, ArrowRight } from 'lucide-react';
 
 export const ServiceNode: React.FC<any> = ({ data }) => {
-  const { serviceId, metrics, isTopCandidate, isSelected, onSelect } = data;
+  const { serviceId, metrics, resources, isTopCandidate, isSelected, onSelect } = data;
 
   const getStatusColor = (health: string) => {
-    switch(health) {
+    switch (health) {
       case 'CRITICAL': return 'text-critical';
-      case 'DEGRADED': return 'text-degraded';
-      case 'WARNING': return 'text-elevated';
+      case 'HIGH': return 'text-degraded';
+      case 'ELEVATED': return 'text-elevated';
       default: return 'text-healthy';
     }
   };
 
   const getStatusDot = (health: string) => {
-    switch(health) {
+    switch (health) {
       case 'CRITICAL': return 'bg-critical';
-      case 'DEGRADED': return 'bg-degraded';
-      case 'WARNING': return 'bg-elevated';
+      case 'HIGH': return 'bg-degraded';
+      case 'ELEVATED': return 'bg-elevated';
       default: return 'bg-healthy';
     }
   };
 
-  // Safe fallback if metrics are missing (e.g. before first tick)
-  const cpu = metrics?.resources?.CPU?.utilization || 0;
-  const memory = metrics?.resources?.MEMORY?.utilization || 0;
-  const connections = metrics?.resources?.CONNECTIONS?.utilization || 0;
-  const workers = metrics?.resources?.WORKERS?.utilization || 0;
+  const healthOrder = { HEALTHY: 0, ELEVATED: 1, HIGH: 2, CRITICAL: 3 } as const;
+  const derivedHealth = (Object.values(resources ?? {}) as Array<{ status?: string }>).reduce((highest, resource) => {
+    const status = resource?.status ?? 'HEALTHY';
+    return healthOrder[status as keyof typeof healthOrder] > healthOrder[highest as keyof typeof healthOrder]
+      ? status
+      : highest;
+  }, 'HEALTHY' as string);
 
-  const health = metrics?.healthStatus || 'HEALTHY';
-  
+  // Safe fallback if metrics are missing (e.g. before first tick)
+  const cpu = (resources?.CPU?.utilization ?? 0) * 100;
+  const memory = (resources?.MEMORY?.utilization ?? 0) * 100;
+  const connections = (resources?.CONNECTIONS?.utilization ?? 0) * 100;
+  const workers = (resources?.WORKERS?.utilization ?? 0) * 100;
+
+  const health = derivedHealth;
+
   const drawBar = (pct: number) => {
     const bars = Math.round((pct / 100) * 10);
-    return '█'.repeat(bars) + '░'.repeat(10 - bars);
+    return '█'.repeat(Math.max(0, Math.min(10, bars))) + '░'.repeat(Math.max(0, 10 - Math.min(10, bars)));
   };
 
   return (
@@ -88,11 +96,11 @@ export const ServiceNode: React.FC<any> = ({ data }) => {
         <div className="flex items-center justify-between border-t border-border pt-3">
           <div className="flex items-center gap-1.5 text-xs text-textMain font-mono">
             <Activity className="w-3.5 h-3.5 text-textMuted" />
-            {Math.round(metrics?.latency || 0)} <span className="text-textMuted text-[10px] font-sans">ms</span>
+            {Math.round(metrics?.latencyMs ?? 0)} <span className="text-textMuted text-[10px] font-sans">ms</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-textMain font-mono">
             <ArrowRight className="w-3.5 h-3.5 text-textMuted" />
-            {metrics?.queueDepth || 0} <span className="text-textMuted text-[10px] font-sans">q</span>
+            {metrics?.queueDepth ?? 0} <span className="text-textMuted text-[10px] font-sans">q</span>
           </div>
         </div>
       </div>

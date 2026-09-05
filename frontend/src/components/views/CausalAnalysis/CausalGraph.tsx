@@ -53,8 +53,7 @@ export const CausalGraph: React.FC = () => {
 
     dependencyGraph.nodes?.forEach((node: any) => {
       const isTopCandidate = topHypothesis?.serviceId === node.id;
-      const metrics = currentTelemetry?.services.find((s: any) => s.serviceId === node.id);
-      
+      const serviceState = currentTelemetry?.services.find((s: any) => s.serviceId === node.id);
       newNodes.push({
         id: node.id,
         type: 'serviceNode',
@@ -62,7 +61,8 @@ export const CausalGraph: React.FC = () => {
         data: {
           serviceId: node.id,
           config: node,
-          metrics: metrics?.metrics,
+          metrics: serviceState?.metrics,
+          resources: serviceState?.resources,
           isTopCandidate,
           isSelected: selectedNodeId === node.id,
           onSelect: () => setSelectedNodeId(node.id === selectedNodeId ? null : node.id)
@@ -76,17 +76,17 @@ export const CausalGraph: React.FC = () => {
       if (topPath) {
         // Causal paths are built symptom -> root or root -> symptom.
         // If they are adjacent in the path, it's a causal edge.
-        const sourceIndex = topPath.findIndex(p => p.serviceId === edge.source);
-        const targetIndex = topPath.findIndex(p => p.serviceId === edge.target);
+        const sourceIndex = topPath.findIndex(p => p.serviceId === edge.from);
+        const targetIndex = topPath.findIndex(p => p.serviceId === edge.to);
         if (sourceIndex !== -1 && targetIndex !== -1 && Math.abs(sourceIndex - targetIndex) === 1) {
           isCausal = true;
         }
       }
 
       newEdges.push({
-        id: `e-${edge.source}-${edge.target}-${i}`,
-        source: edge.source,
-        target: edge.target,
+        id: `e-${edge.from}-${edge.to}-${i}`,
+        source: edge.from,
+        target: edge.to,
         animated: isCausal, // Animate causal edges
         style: {
           stroke: isCausal ? '#F97316' : '#374151',
