@@ -11,7 +11,11 @@ export const PredictionCard: React.FC<{ prediction: CounterfactualPrediction }> 
         <div className="text-2xl font-bold tracking-tight">
           {prediction.rootServiceId} / <span className="text-primary font-mono">{prediction.rootResource}</span>
         </div>
-        <div className="text-xs text-textMuted mt-2">Confidence at prediction: {Math.round(prediction.confidenceAtPrediction * 100)}%</div>
+        <div className="text-xs text-textMuted mt-2 flex items-center justify-center gap-3">
+          <span>Confidence at prediction: {Math.round(prediction.confidenceAtPrediction * 100)}%</span>
+          <span>•</span>
+          <span className="font-mono text-primary/80 font-semibold">Created at Tick #{prediction.createdAtTick}</span>
+        </div>
       </div>
 
       <div className="p-6">

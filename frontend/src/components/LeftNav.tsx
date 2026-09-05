@@ -50,15 +50,21 @@ export const LeftNav: React.FC = () => {
                 key={label}
                 onClick={() => setActiveTab(label)}
                 className={clsx(
-                  "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors text-left",
+                  "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors text-left",
                   active 
                     ? "bg-primary/10 text-primary border border-primary/20" 
-                    : "text-textMuted hover:bg-surfaceHover hover:text-textMain",
-                  !available && !active && "opacity-50"
+                    : "text-textMuted hover:bg-surfaceHover hover:text-textMain"
                 )}
               >
-                <Icon className="w-4 h-4" />
-                {label}
+                <div className="flex items-center gap-3">
+                  <Icon className="w-4 h-4" />
+                  <span>{label}</span>
+                </div>
+                {!available && (
+                  <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-surface/80 border border-border text-textMuted/70">
+                    {label === 'Prediction' ? 'Pending' : 'Locked'}
+                  </span>
+                )}
               </button>
             );
           })}

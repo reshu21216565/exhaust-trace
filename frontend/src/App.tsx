@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useIncident } from './lib/IncidentContext';
 import { useUI } from './lib/UIContext';
 import { TopBar } from './components/TopBar';
@@ -5,11 +6,26 @@ import { LeftNav } from './components/LeftNav';
 import { MainWorkspace } from './components/MainWorkspace';
 import { RightDrawer } from './components/RightDrawer';
 import { JudgeMode } from './components/JudgeMode';
+import { LandingPage } from './pages/LandingPage';
 import { Loader2 } from 'lucide-react';
 
 function App() {
   const { bundle, isConnected, startIncident } = useIncident();
   const { judgeMode } = useUI();
+  const [showLanding, setShowLanding] = useState<boolean>(true);
+
+  if (showLanding) {
+    return (
+      <LandingPage
+        onEnter={async () => {
+          if (!bundle) {
+            await startIncident();
+          }
+          setShowLanding(false);
+        }}
+      />
+    );
+  }
 
   if (!isConnected && !bundle) {
     return (

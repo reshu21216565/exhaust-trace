@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useIncident } from '../../../lib/IncidentContext';
-import { Beaker, ShieldAlert, CheckCircle2, RotateCcw, TrendingDown } from 'lucide-react';
+import { Beaker, ShieldAlert, CheckCircle2, RotateCcw, TrendingDown, Lock, ArrowRight } from 'lucide-react';
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
 const summarizeTrajectory = (trajectory: any) => {
@@ -20,11 +20,12 @@ const summarizeTrajectory = (trajectory: any) => {
 };
 
 export const Experiment: React.FC = () => {
-  const { bundle, runRootExperiment, runSymptomExperiment } = useIncident();
+  const { bundle, runRootExperiment, runSymptomExperiment, lockPrediction } = useIncident();
   const [symptomService, setSymptomService] = useState('api_gateway');
   const [symptomResource, setSymptomResource] = useState('MEMORY');
   const [showConfirmSymptom, setShowConfirmSymptom] = useState(false);
   const [isRunningRootExperiment, setIsRunningRootExperiment] = useState(false);
+  const [isLocking, setIsLocking] = useState(false);
 
   const rootReplay = useMemo(() => summarizeTrajectory(bundle?.rootTrajectory), [bundle?.rootTrajectory]);
   const symptomReplay = useMemo(() => summarizeTrajectory(bundle?.symptomTrajectory), [bundle?.symptomTrajectory]);
@@ -51,12 +52,53 @@ export const Experiment: React.FC = () => {
 
   if (!bundle || !bundle.prediction) {
     return (
-      <div className="flex-1 p-6 flex flex-col items-center justify-center text-center">
-        <Beaker className="w-12 h-12 text-border mb-4" />
-        <h2 className="text-xl font-bold tracking-wide mb-2">Awaiting Frozen Prediction</h2>
-        <p className="text-textMuted max-w-md">
-          You must lock a prediction before running validation experiments.
+      <div className="flex-1 p-6 flex flex-col items-center justify-center text-center max-w-lg mx-auto">
+        <Beaker className="w-12 h-12 text-primary/70 mb-4 animate-pulse" />
+        <h2 className="text-xl font-bold tracking-wide mb-2">Awaiting Counterfactual Prediction</h2>
+        <p className="text-textMuted text-sm mb-6 leading-relaxed">
+          Intervention experiments require a computed prediction trajectory. Once top hypothesis confidence exceeds 10% (around tick 15), prediction will populate automatically.
         </p>
+        <div className="glass-panel p-4 w-full text-xs text-textMuted font-mono border-l-4 border-l-primary flex items-center justify-between">
+          <span>PIPELINE STATUS</span>
+          <span className="text-primary font-bold">WAITING FOR PREDICTION ENGINE</span>
+        </div>
+      </div>
+    );
+  }
+
+  const isPredictionFrozen = bundle.status === 'PREDICTION_LOCKED' || 
+                             bundle.status === 'EXPERIMENT_RUNNING' || 
+                             bundle.status === 'VALIDATED' || 
+                             bundle.status === 'COMPLETED';
+
+  if (!isPredictionFrozen) {
+    return (
+      <div className="flex-1 p-6 flex flex-col items-center justify-center text-center max-w-xl mx-auto">
+        <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mb-6">
+          <Lock className="w-8 h-8 text-primary" />
+        </div>
+        <h2 className="text-2xl font-bold tracking-wide mb-2">Prediction Ready — Action Required</h2>
+        <p className="text-textMuted text-sm mb-8 leading-relaxed">
+          A counterfactual prediction has been generated for candidate <span className="font-mono text-textMain font-bold">{bundle.prediction.rootServiceId} / {bundle.prediction.rootResource}</span>. Freeze the prediction snapshot to unlock intervention testing.
+        </p>
+
+        <button
+          onClick={async () => {
+            if (isLocking) return;
+            setIsLocking(true);
+            try {
+              await lockPrediction();
+            } finally {
+              setIsLocking(false);
+            }
+          }}
+          disabled={isLocking}
+          className="px-8 py-4 bg-primary hover:bg-primaryHover disabled:opacity-60 text-white rounded-lg shadow-lg font-bold tracking-widest flex items-center gap-3 transition-colors text-sm"
+        >
+          <Lock className="w-4 h-4" />
+          {isLocking ? 'FREEZING PREDICTION...' : 'FREEZE PREDICTION & UNLOCK EXPERIMENTS'}
+          <ArrowRight className="w-4 h-4 ml-1" />
+        </button>
       </div>
     );
   }
@@ -75,6 +117,12 @@ export const Experiment: React.FC = () => {
           </h2>
           <p className="text-sm text-textMuted mt-1">Execute targeted relief to validate the hypothesis</p>
         </div>
+        {bundle.rootTrajectory && (
+          <div className="px-3 py-1 bg-surface border border-border rounded text-xs font-mono text-textMuted flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-healthy animate-pulse" />
+            EXECUTED TICK #{bundle.rootTrajectory.startTick} – #{bundle.rootTrajectory.endTick}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -60,7 +60,7 @@ export const ConcurrentTab: React.FC = () => {
 
   const renderIncidentPanel = (
     title: string,
-    label: 'A' | 'B',
+    _label: 'A' | 'B',
     bundle: IncidentEvidenceBundle | null,
     borderAccent: string,
     accentClass: string

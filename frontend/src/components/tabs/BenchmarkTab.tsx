@@ -44,7 +44,7 @@ export const BenchmarkTab: React.FC = () => {
   const [benchmarkResult, setBenchmarkResult] = useState<BenchmarkResponse | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleRunBenchmark = async () => {
     setIsRunning(true);
@@ -281,7 +281,7 @@ export const BenchmarkTab: React.FC = () => {
                   <YAxis stroke="#A1A1AA" tick={{ fill: '#A1A1AA', fontSize: 12 }} label={{ value: 'Ticks', angle: -90, position: 'insideLeft', fill: '#A1A1AA', fontSize: 12 }} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#171717', borderColor: '#404040', borderRadius: '8px', color: '#F9FAFB', fontSize: '12px' }}
-                    formatter={(val: any, name: string) => [`${val} ticks`, 'Time to Diagnosis']}
+                    formatter={(val: any) => [`${val} ticks`, 'Time to Diagnosis']}
                   />
                   <Bar dataKey="ticks" radius={[4, 4, 0, 0]}>
                     {benchmarkResult.runs.map((r, i) => (

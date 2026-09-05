@@ -8,8 +8,16 @@ export const Evidence: React.FC = () => {
   const { bundle } = useIncident();
   if (!bundle || !bundle.causalAnalysis) {
     return (
-      <div className="flex-1 p-6 flex items-center justify-center">
-        <p className="text-textMuted">Waiting for causal analysis...</p>
+      <div className="flex-1 p-6 flex flex-col items-center justify-center text-center max-w-lg mx-auto">
+        <Database className="w-12 h-12 text-primary/70 mb-4 animate-pulse" />
+        <h2 className="text-xl font-bold tracking-wide mb-2">Awaiting Causal Evidence Matrix</h2>
+        <p className="text-textMuted text-sm mb-6 leading-relaxed">
+          The causal analysis engine requires at least 10 ticks of active telemetry observation to generate hypothesis evidence scores.
+        </p>
+        <div className="glass-panel p-4 w-full text-xs text-textMuted font-mono border-l-4 border-l-primary flex items-center justify-between">
+          <span>PIPELINE STATUS</span>
+          <span className="text-primary font-bold">ACCUMULATING TELEMETRY</span>
+        </div>
       </div>
     );
   }
@@ -43,6 +51,10 @@ export const Evidence: React.FC = () => {
             Causal Evidence Matrix
           </h2>
           <p className="text-sm text-textMuted mt-1">Structured evidence supporting or refuting each candidate hypothesis</p>
+        </div>
+        <div className="px-3 py-1 bg-surface border border-border rounded text-xs font-mono text-textMuted flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-healthy animate-pulse" />
+          ANALYZED THROUGH TICK #{bundle.causalAnalysis.analyzedThroughTick}
         </div>
       </div>
 

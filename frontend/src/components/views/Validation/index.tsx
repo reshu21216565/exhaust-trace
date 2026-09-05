@@ -1,19 +1,63 @@
 import React from 'react';
 import { useIncident } from '../../../lib/IncidentContext';
-import { CheckCircle2, ShieldAlert } from 'lucide-react';
+import { useUI } from '../../../lib/UIContext';
+import { CheckCircle2, ShieldAlert, Beaker, ArrowRight } from 'lucide-react';
 import { ValidationResult } from './ValidationResult';
 
 export const Validation: React.FC = () => {
-  const { bundle, groundTruth, revealGroundTruth, completeIncident } = useIncident();
+  const { bundle, groundTruth, revealGroundTruth, completeIncident, runRootExperiment } = useIncident();
+  const { setActiveTab } = useUI();
 
   if (!bundle || (!bundle.rootValidation && !bundle.symptomValidation)) {
+    const hasPrediction = !!bundle?.prediction;
+    const isFrozen = bundle?.status === 'PREDICTION_LOCKED' || bundle?.status === 'EXPERIMENT_RUNNING';
+
     return (
-      <div className="flex-1 p-6 flex flex-col items-center justify-center text-center">
-        <CheckCircle2 className="w-12 h-12 text-border mb-4" />
-        <h2 className="text-xl font-bold tracking-wide mb-2">Awaiting Experiment Validation</h2>
-        <p className="text-textMuted max-w-md">
-          Run an experiment to validate the counterfactual prediction.
+      <div className="flex-1 p-6 flex flex-col items-center justify-center text-center max-w-xl mx-auto">
+        <div className="w-16 h-16 rounded-full bg-healthy/10 border border-healthy/30 flex items-center justify-center mb-6">
+          <CheckCircle2 className="w-8 h-8 text-healthy" />
+        </div>
+        <h2 className="text-2xl font-bold tracking-wide mb-2">Awaiting Experiment Validation</h2>
+        <p className="text-textMuted text-sm mb-8 leading-relaxed">
+          Validation results are generated after executing an intervention experiment. Compare predicted recovery curves against actual post-relief telemetry.
         </p>
+
+        <div className="glass-panel p-6 w-full mb-8 text-left space-y-4">
+          <div className="text-xs uppercase font-mono text-textMuted tracking-wider font-bold mb-2">REQUIRED WORKFLOW STEPS</div>
+          
+          <div className="flex items-center justify-between text-sm p-3 rounded bg-surface/50 border border-border">
+            <span className="flex items-center gap-3">
+              <span className={`w-5 h-5 rounded-full text-xs font-mono flex items-center justify-center font-bold ${hasPrediction ? 'bg-healthy/20 text-healthy border border-healthy/30' : 'bg-surface text-textMuted border border-border'}`}>1</span>
+              <span>Generate Prediction</span>
+            </span>
+            <span className="font-mono text-xs">{hasPrediction ? 'COMPLETED' : 'PENDING'}</span>
+          </div>
+
+          <div className="flex items-center justify-between text-sm p-3 rounded bg-surface/50 border border-border">
+            <span className="flex items-center gap-3">
+              <span className={`w-5 h-5 rounded-full text-xs font-mono flex items-center justify-center font-bold ${isFrozen ? 'bg-healthy/20 text-healthy border border-healthy/30' : 'bg-surface text-textMuted border border-border'}`}>2</span>
+              <span>Freeze Prediction</span>
+            </span>
+            <span className="font-mono text-xs">{isFrozen ? 'FROZEN' : 'NOT FROZEN'}</span>
+          </div>
+
+          <div className="flex items-center justify-between text-sm p-3 rounded bg-surface/50 border border-border">
+            <span className="flex items-center gap-3">
+              <span className="w-5 h-5 rounded-full text-xs font-mono flex items-center justify-center font-bold bg-primary/20 text-primary border border-primary/30">3</span>
+              <span>Run Intervention Experiment</span>
+            </span>
+            <span className="font-mono text-xs text-primary font-bold">NEXT STEP</span>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setActiveTab('Experiment')}
+          className="px-8 py-4 bg-primary hover:bg-primaryHover text-white rounded-lg shadow-lg font-bold tracking-widest flex items-center gap-3 transition-colors text-sm"
+        >
+          <Beaker className="w-4 h-4" />
+          GO TO EXPERIMENT TAB TO RUN INTERVENTION
+          <ArrowRight className="w-4 h-4 ml-1" />
+        </button>
       </div>
     );
   }
@@ -30,6 +74,12 @@ export const Validation: React.FC = () => {
           </h2>
           <p className="text-sm text-textMuted mt-1">Comparing predicted recovery against actual experiment trajectory</p>
         </div>
+        {bundle.rootTrajectory && (
+          <div className="px-3 py-1 bg-surface border border-border rounded text-xs font-mono text-textMuted flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-healthy animate-pulse" />
+            VALIDATED AT TICK #{bundle.rootTrajectory.endTick}
+          </div>
+        )}
       </div>
 
       <div className="max-w-5xl mx-auto w-full flex flex-col gap-6">

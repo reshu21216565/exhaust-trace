@@ -237,7 +237,7 @@ export const ConfidenceTab: React.FC = () => {
               />
               <Tooltip
                 contentStyle={{ backgroundColor: '#171717', borderColor: '#404040', borderRadius: '8px', color: '#F9FAFB', fontSize: '12px' }}
-                formatter={(val: any, name: string) => [`${val}%`, 'Confidence']}
+                formatter={(val: any) => [`${val}%`, 'Confidence']}
                 labelFormatter={(label) => `Tick ${label}`}
                 content={({ active, payload, label }) => {
                   if (!active || !payload || !payload[0]) return null;
