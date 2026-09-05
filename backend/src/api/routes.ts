@@ -1,5 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { IncidentOrchestrator } from '../orchestrator/IncidentOrchestrator';
+import { interpretFault, analyzeIncident } from '../ai/GeminiClient';
+import { FaultValidator } from '../ai/FaultValidator';
 
 const ANALYST_DENYLIST = new Set([
   'injectedRoot',
@@ -306,6 +308,118 @@ export function createApiRouter(orchestrator: IncidentOrchestrator): Router {
       { serviceId: serviceB, resource: resourceB, severity: severityB || 'CRITICAL' }
     );
     res.json(result);
+  }));
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // BLOCK 7: AI ENDPOINTS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * POST /ai/interpret-fault
+   * Gemini interprets natural language → structured FaultCommand candidate.
+   * Does NOT execute anything. Returns candidate + server-side validation.
+   * Double-validation happens again in /ai/inject-fault before execution.
+   */
+  router.post('/ai/interpret-fault', asyncHandler(async (req: Request, res: Response) => {
+    const text = String(req.body?.text ?? '').trim();
+    if (!text) throw { errorCode: 'BAD_REQUEST', message: 'text is required' };
+    if (text.length > 500) throw { errorCode: 'BAD_REQUEST', message: 'text too long (max 500 chars)' };
+
+    console.log(`[AI] Interpreting fault request: "${text}"`);
+    const interpretation = await interpretFault(text);
+
+    // Server-side validation of the candidate (first validation pass)
+    let validation = null;
+    if (interpretation.intent === 'FAULT_INJECTION' && interpretation.serviceId && interpretation.resource && interpretation.severity) {
+      validation = FaultValidator.validate({
+        serviceId: interpretation.serviceId,
+        resource: interpretation.resource,
+        severity: interpretation.severity,
+      });
+    }
+
+    console.log(`[AI] Interpretation result: intent=${interpretation.intent}, service=${interpretation.serviceId}, resource=${interpretation.resource}, severity=${interpretation.severity}, geminiAvailable=${interpretation.geminiAvailable}`);
+
+    res.json({
+      interpretation,
+      validation,
+      auditEvent: {
+        type: 'AI_FAULT_REQUESTED',
+        tick: orchestrator.getBundle().playback.tick,
+        timestamp: Date.now(),
+        summary: `AI interpreted: "${text.slice(0, 80)}" → ${interpretation.intent}`,
+      },
+    });
+  }));
+
+  /**
+   * POST /ai/inject-fault
+   * Executes a validated FaultCommand through the existing orchestrator.
+   * DOUBLE-VALIDATES on the server side — never trusts client-provided validation.
+   * Requires explicit user confirmation before this endpoint is called.
+   */
+  router.post('/ai/inject-fault', asyncHandler(async (req: Request, res: Response) => {
+    const { serviceId, resource, severity } = req.body ?? {};
+
+    // Second validation pass — authoritative
+    const validation = FaultValidator.validate({ serviceId, resource, severity });
+    if (!validation.valid) {
+      console.warn(`[AI] Fault injection REJECTED:`, validation.errors);
+      res.status(400).json({
+        errorCode: 'AI_FAULT_REJECTED',
+        message: 'Fault command validation failed',
+        errors: validation.errors,
+        auditEvent: {
+          type: 'AI_FAULT_REJECTED',
+          tick: orchestrator.getBundle().playback.tick,
+          timestamp: Date.now(),
+          summary: `Rejected: ${serviceId}/${resource}/${severity} — ${validation.errors.join('; ')}`,
+        },
+      });
+      return;
+    }
+
+    const cmd = validation.command!;
+    console.log(`[AI] Injecting validated fault: ${cmd.serviceId}/${cmd.resource}/${cmd.severity}`);
+
+    // Execute through the standard orchestrator path — identical to startCustomScenario
+    const seed = `ai-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+    orchestrator.startCustomScenario(cmd.serviceId, cmd.resource as any, cmd.severity, seed);
+
+    const bundle = orchestrator.getBundle();
+    console.log(`[AI] Fault injected successfully. Incident ID: ${bundle.incidentId}`);
+
+    res.json({
+      injected: true,
+      command: cmd,
+      incidentId: bundle.incidentId,
+      status: bundle.status,
+      auditEvent: {
+        type: 'AI_FAULT_INJECTED',
+        tick: bundle.playback.tick,
+        timestamp: Date.now(),
+        summary: `AI injected: ${cmd.serviceId}/${cmd.resource}/${cmd.severity}`,
+      },
+    });
+  }));
+
+  /**
+   * POST /ai/analyze
+   * Gemini answers a natural-language investigation question.
+   * Context is the safe GeminiInvestigationContext DTO — no hidden state.
+   */
+  router.post('/ai/analyze', asyncHandler(async (req: Request, res: Response) => {
+    const question = String(req.body?.question ?? '').trim();
+    if (!question) throw { errorCode: 'BAD_REQUEST', message: 'question is required' };
+    if (question.length > 600) throw { errorCode: 'BAD_REQUEST', message: 'question too long (max 600 chars)' };
+
+    const bundle = orchestrator.getBundle();
+    console.log(`[AI] Analyst question at tick ${bundle.playback.tick}: "${question.slice(0, 80)}"`);
+
+    const response = await analyzeIncident(bundle, question);
+    console.log(`[AI] Answer (geminiAvailable=${response.geminiAvailable}): ${response.answer.slice(0, 100)}...`);
+
+    res.json(response);
   }));
 
   // Error handler middleware
