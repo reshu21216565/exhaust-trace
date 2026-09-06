@@ -26,7 +26,16 @@ export const JudgeMode: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rightTab, setRightTab] = useState<RightTab>('ai'); // Default to AI tab
 
-  if (!bundle) return null;
+  // Render a background-preserving skeleton instead of null to prevent black flash.
+  // "return null" leaves nothing in the DOM → raw <html> black shows through during animations.
+  if (!bundle) return (
+    <div className="fixed inset-0 z-[100] bg-background flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <Network className="w-8 h-8 text-primary animate-pulse" />
+        <span className="text-xs font-mono text-textMuted uppercase tracking-widest">Connecting…</span>
+      </div>
+    </div>
+  );
 
   const injectedTarget = `${serviceId}/${resource}`;
   const topHypothesis = bundle.causalAnalysis?.hypotheses?.[0];

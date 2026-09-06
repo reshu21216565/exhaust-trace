@@ -178,9 +178,9 @@
 
 @keyframes sentinelRevealArrival {
   0% {
-    opacity: 0;
-    transform: scale(0.96);
-    filter: blur(4px);
+    opacity: 0.08;
+    transform: scale(0.97);
+    filter: blur(3px);
   }
   100% {
     opacity: 1;
@@ -196,9 +196,12 @@
     filter: saturate(1) brightness(1);
   }
   100% {
-    opacity: 0;
+    /* Never fully transparent — the outer bg-background shell shows through
+       instead of the raw black body. 0.08 is visually imperceptible but
+       ensures no black frame between exit and entry. */
+    opacity: 0.08;
     transform: scale(0.97);
-    filter: saturate(0.2) brightness(0.4);
+    filter: saturate(0.3) brightness(0.6);
   }
 }
 

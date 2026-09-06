@@ -68,7 +68,10 @@ export const SentinelTransitionWrapper: React.FC = () => {
   }, [sentinelMode, activeView]);
 
   return (
-    <>
+    // bg-background on the outer shell is intentional: it prevents black flash
+    // during sentinel-page-exit/enter animations which animate opacity to 0.
+    // The outer div never animates, so it always covers the raw <body> background.
+    <div className="w-full h-full bg-background">
       {/* Single pass soft light scanning beam overlay during transition */}
       {isSweeping && <div className="sentinel-sweep-beam" />}
 
@@ -95,6 +98,6 @@ export const SentinelTransitionWrapper: React.FC = () => {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 };
