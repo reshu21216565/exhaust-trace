@@ -204,18 +204,24 @@ export class IncidentOrchestrator {
   }
 
   public resume() {
-    if (!this.world) throw { errorCode: 'SESSION_NOT_FOUND', message: 'Session not initialized' };
     if (this.status === 'EXPERIMENT_RUNNING' || this.status === 'VALIDATED') {
       throw { errorCode: 'INVALID_STATE_TRANSITION', message: 'Cannot resume simulation in current state' };
     }
+    if (!this.world) {
+      this.startScenario(this.scenarioId || 'default_exhaustion', this.initialSeed || `seed-${Date.now()}`);
+      return;
+    }
     if (this.playback.isRunning) return;
     this.playback.isRunning = true;
-    if (this.status === 'PAUSED') this.setStatus('RUNNING');
+    this.setStatus('RUNNING');
     this.startLoop();
   }
 
   public step() {
-    if (!this.world) throw { errorCode: 'SESSION_NOT_FOUND', message: 'Session not initialized' };
+    if (!this.world) {
+      this.startScenario(this.scenarioId || 'default_exhaustion', this.initialSeed || `seed-${Date.now()}`);
+      this.pause();
+    }
     if (this.playback.isRunning) throw { errorCode: 'INVALID_STATE_TRANSITION', message: 'Cannot step while running' };
     this.tickSimulation();
   }
@@ -231,6 +237,7 @@ export class IncidentOrchestrator {
   }
 
   private startLoop() {
+    this.stopLoop(); // Guard against multiple intervals stacking up if Play is clicked more than once
     const msPerTick = DefaultConfig.tickDurationMs / this.playback.speed;
     this.intervalId = setInterval(() => {
       this.tickSimulation();

@@ -442,12 +442,12 @@ export function createApiRouter(orchestrator: IncidentOrchestrator): Router {
 
   router.post('/incident/pause', asyncHandler(async (req: Request, res: Response) => {
     orchestrator.pause();
-    res.json({ status: 'PAUSED' });
+    res.json(orchestrator.getBundle());
   }));
 
   router.post('/incident/resume', asyncHandler(async (req: Request, res: Response) => {
     orchestrator.resume();
-    res.json({ status: 'RUNNING' });
+    res.json(orchestrator.getBundle());
   }));
 
   router.post('/incident/step', asyncHandler(async (req: Request, res: Response) => {
@@ -506,71 +506,7 @@ export function createApiRouter(orchestrator: IncidentOrchestrator): Router {
     res.json(truth);
   }));
 
-  router.post('/incident/pause', asyncHandler(async (req: Request, res: Response) => {
-    orchestrator.pause();
-    res.json({ status: 'PAUSED' });
-  }));
 
-  router.post('/incident/resume', asyncHandler(async (req: Request, res: Response) => {
-    orchestrator.resume();
-    res.json({ status: 'RUNNING' });
-  }));
-
-  router.post('/incident/step', asyncHandler(async (req: Request, res: Response) => {
-    orchestrator.step();
-    res.json(orchestrator.getBundle());
-  }));
-
-  router.post('/incident/speed', asyncHandler(async (req: Request, res: Response) => {
-    const { speed } = req.body;
-    if (!speed) throw { errorCode: 'BAD_REQUEST', message: 'speed is required' };
-    orchestrator.setSpeed(speed);
-    res.json({ speed });
-  }));
-
-  router.post('/incident/reset', asyncHandler(async (req: Request, res: Response) => {
-    orchestrator.reset();
-    res.json(orchestrator.getBundle());
-  }));
-
-  router.get('/incident/state', asyncHandler(async (req: Request, res: Response) => {
-    try {
-      res.json(orchestrator.getBundle());
-    } catch (e: any) {
-      if (e.errorCode === 'SESSION_NOT_FOUND') {
-        res.status(404).json(e);
-      } else {
-        throw e;
-      }
-    }
-  }));
-
-  router.post('/incident/prediction/lock', asyncHandler(async (req: Request, res: Response) => {
-    const prediction = orchestrator.lockPrediction();
-    res.json(prediction);
-  }));
-
-  router.post('/incident/experiment/root', asyncHandler(async (req: Request, res: Response) => {
-    const validation = orchestrator.runRootExperiment();
-    res.json(validation);
-  }));
-
-  router.post('/incident/experiment/symptom', asyncHandler(async (req: Request, res: Response) => {
-    const { serviceId, resource } = req.body;
-    if (!serviceId || !resource) throw { errorCode: 'BAD_REQUEST', message: 'serviceId and resource are required' };
-    const validation = orchestrator.runSymptomExperiment(serviceId, resource);
-    res.json(validation);
-  }));
-
-  router.post('/incident/complete', asyncHandler(async (req: Request, res: Response) => {
-    orchestrator.completeIncident();
-    res.json({ status: 'COMPLETED' });
-  }));
-
-  router.post('/incident/reveal', asyncHandler(async (req: Request, res: Response) => {
-    const truth = orchestrator.revealGroundTruth();
-    res.json(truth);
-  }));
 
   router.post('/incident/analyst-query', asyncHandler(async (req: Request, res: Response) => {
     const question = String(req.body?.question ?? '').trim();

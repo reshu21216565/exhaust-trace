@@ -46,13 +46,14 @@ export const JudgeMode: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-background text-textMain flex flex-col overflow-hidden">
-      {/* Header */}
-      <header className="h-16 glass-header px-6 flex items-center justify-between shrink-0">
+    <div className="w-full h-full bg-background text-textMain flex flex-col overflow-hidden">
+      {/* Sub Header */}
+      <header className="h-12 glass-header px-6 flex items-center justify-between shrink-0 border-b border-border">
         <div className="flex items-center gap-3">
-          <Network className="w-6 h-6 text-primary" />
-          <div>
-            <h1 className="text-lg font-bold tracking-widest text-textMain leading-tight">JUDGE MODE</h1>
+          <Network className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-2">
+            <h1 className="text-sm font-bold tracking-widest text-textMain leading-tight">JUDGE MODE</h1>
+            <span className="text-border">|</span>
             <p className="text-xs text-textMuted uppercase tracking-wider leading-tight">ExhaustTrace Presenter View — Gemini-Native Investigation</p>
           </div>
         </div>
@@ -63,9 +64,10 @@ export const JudgeMode: React.FC = () => {
           </span>
           <button
             onClick={() => setJudgeMode(false)}
-            className="p-2 text-textMuted hover:text-textMain hover:bg-surface rounded-full transition-colors"
+            className="p-1 text-textMuted hover:text-textMain hover:bg-surface rounded-lg transition-colors border border-border"
+            title="Return to Dashboard"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
       </header>

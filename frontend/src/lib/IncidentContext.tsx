@@ -160,9 +160,21 @@ export const IncidentProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setGroundTruth(null);
   }, [action]);
 
-  const pause = useCallback(() => action('/incident/pause'), [action]);
-  const resume = useCallback(() => action('/incident/resume'), [action]);
-  const step = useCallback(() => action('/incident/step'), [action]);
+  const pause = useCallback(async () => {
+    const data = await action('/incident/pause');
+    if (data && data.incidentId) setBundle(data);
+  }, [action]);
+
+  const resume = useCallback(async () => {
+    const data = await action('/incident/resume');
+    if (data && data.incidentId) setBundle(data);
+  }, [action]);
+
+  const step = useCallback(async () => {
+    const data = await action('/incident/step');
+    if (data && data.incidentId) setBundle(data);
+  }, [action]);
+
   const setSpeed = useCallback((speed: number) => action('/incident/speed', { speed }), [action]);
   const reset = useCallback(async () => {
     const data = await action('/incident/reset');

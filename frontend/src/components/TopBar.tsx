@@ -8,7 +8,7 @@ import { ShinyButton } from './ui/shiny-button';
 
 export const TopBar: React.FC = () => {
   const { bundle, isConnected, pause, resume, step, setSpeed, reset } = useIncident();
-  const { setJudgeMode, sentinelMode, setSentinelMode } = useUI();
+  const { judgeMode, setJudgeMode, sentinelMode, setSentinelMode } = useUI();
 
   if (!bundle) return null;
 
@@ -18,7 +18,11 @@ export const TopBar: React.FC = () => {
   return (
     <header className="h-14 glass-header px-4 flex items-center justify-between shrink-0 z-50">
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2">
+        <div 
+          onClick={() => { setSentinelMode(false); setJudgeMode(false); }} 
+          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+          title="Return to Dashboard"
+        >
           <Activity className="w-5 h-5 text-primary" />
           <div>
             <h1 className="text-sm font-bold tracking-widest text-textMain leading-tight">EXHAUSTTRACE</h1>
@@ -86,29 +90,58 @@ export const TopBar: React.FC = () => {
 
         <div className="h-6 w-px bg-border mx-2" />
 
-        <button
-          onClick={() => setSentinelMode(!sentinelMode)}
-          className={clsx(
-            "flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-mono font-bold transition-all border",
-            sentinelMode
-              ? "bg-primary/20 text-primary border-primary/50 shadow-md shadow-primary/20"
-              : "bg-surface border-border text-textMuted hover:text-textMain hover:border-primary/40"
-          )}
-          title="ML Early-Warning Radar"
-        >
-          <Radar className={clsx("w-3.5 h-3.5", sentinelMode && "animate-spin-slow text-primary")} />
-          <span>SENTINEL</span>
-        </button>
+        <div className="flex items-center bg-surface border border-border rounded-lg p-0.5 gap-1">
+          <button
+            onClick={() => {
+              setSentinelMode(false);
+              setJudgeMode(false);
+            }}
+            className={clsx(
+              "flex items-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-mono font-bold transition-all",
+              !sentinelMode && !judgeMode
+                ? "bg-primary text-white shadow-sm"
+                : "text-textMuted hover:text-textMain hover:bg-surfaceHover"
+            )}
+            title="Investigation Dashboard"
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>DASHBOARD</span>
+          </button>
 
-        <ShinyButton 
-          onClick={() => setJudgeMode(true)}
-          className="!py-1.5 !px-3 !text-xs !bg-transparent"
-        >
-          <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => {
+              setSentinelMode(true);
+              setJudgeMode(false);
+            }}
+            className={clsx(
+              "flex items-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-mono font-bold transition-all",
+              sentinelMode
+                ? "bg-primary text-white shadow-sm"
+                : "text-textMuted hover:text-textMain hover:bg-surfaceHover"
+            )}
+            title="ML Early-Warning Radar"
+          >
+            <Radar className={clsx("w-3.5 h-3.5", sentinelMode && "animate-spin-slow")} />
+            <span>SENTINEL</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setJudgeMode(true);
+              setSentinelMode(false);
+            }}
+            className={clsx(
+              "flex items-center gap-1.5 py-1.5 px-3 rounded-md text-xs font-mono font-bold transition-all",
+              judgeMode
+                ? "bg-primary text-white shadow-sm"
+                : "text-textMuted hover:text-textMain hover:bg-surfaceHover"
+            )}
+            title="Presenter Judge Mode"
+          >
             <Network className="w-3.5 h-3.5" />
-            JUDGE MODE
-          </div>
-        </ShinyButton>
+            <span>JUDGE MODE</span>
+          </button>
+        </div>
       </div>
     </header>
   );

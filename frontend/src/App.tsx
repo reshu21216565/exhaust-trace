@@ -5,20 +5,21 @@ import { TopBar } from './components/TopBar';
 import { LeftNav } from './components/LeftNav';
 import { MainWorkspace } from './components/MainWorkspace';
 import { RightDrawer } from './components/RightDrawer';
-import { SentinelTransitionWrapper } from './components/sentinel/SentinelTransitionWrapper';
+import { SentinelPage } from './pages/SentinelPage';
+import { JudgeMode } from './components/JudgeMode';
 import { LandingPage } from './pages/LandingPage';
 import { Loader2 } from 'lucide-react';
 
 function App() {
   const { bundle, isConnected, startIncident } = useIncident();
-  const { judgeMode, sentinelMode, setSentinelMode } = useUI();
+  const { judgeMode, setJudgeMode, sentinelMode, setSentinelMode } = useUI();
   const [showLanding, setShowLanding] = useState<boolean>(true);
 
   if (showLanding) {
     return (
       <LandingPage
         onEnter={async () => {
-          if (!bundle) {
+          if (!bundle || !bundle.incidentId) {
             await startIncident();
           }
           setShowLanding(false);
@@ -53,7 +54,35 @@ function App() {
     );
   }
 
-  return <SentinelTransitionWrapper />;
+  return (
+    <div className="flex flex-col h-screen overflow-hidden bg-background text-textMain relative">
+      {!isConnected && (
+        <div className="absolute inset-x-0 top-0 z-50 flex justify-center pt-4 pointer-events-none">
+          <div className="rounded-full border border-yellow-500/40 bg-yellow-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-yellow-200 shadow-lg backdrop-blur-sm">
+            RECONNECTING...
+          </div>
+        </div>
+      )}
+      
+      {/* Persistent Shell TopBar */}
+      <TopBar />
+      
+      {/* Dynamic Viewport Content */}
+      <main className="flex-1 flex overflow-hidden relative">
+        {sentinelMode ? (
+          <SentinelPage onBackToDashboard={() => { setSentinelMode(false); setJudgeMode(false); }} />
+        ) : judgeMode ? (
+          <JudgeMode />
+        ) : (
+          <div className="flex flex-1 overflow-hidden w-full h-full">
+            <LeftNav />
+            <MainWorkspace />
+            <RightDrawer />
+          </div>
+        )}
+      </main>
+    </div>
+  );
 }
 
 export default App;

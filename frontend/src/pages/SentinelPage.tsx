@@ -132,9 +132,7 @@ export const SentinelPage: React.FC<{ onBackToDashboard?: () => void }> = ({ onB
   }, [data]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background text-textMain relative">
-      <TopBar />
-
+    <div className="w-full h-full flex flex-col overflow-hidden bg-background text-textMain relative">
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Header Hero Section */}
         <div className="glass-panel p-6 relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-primary/20">
