@@ -586,12 +586,79 @@ export interface IncidentEvidenceBundle {
   symptomTrajectory: ActualInterventionTrajectory | null;
   symptomValidation: InterventionValidationResult | null;
   experimentLog: ExperimentEvent[];
+
+  // Block 8: Remedy Lab
+  remedyProposals?: RemedyProposal[];
+  remedySimulations?: Record<string, RemedySimulationResult>;
+  selectedRemedyId?: string | null;
 }
 
-/**
- * The explicit ground-truth reveal object.
- * Only returned from a specific explicit endpoint.
- */
+// ==========================================
+// 9. BLOCK 8 — REMEDY LAB CONTRACTS
+// ==========================================
+
+export type RemedyCategory = 'MITIGATE' | 'FIX' | 'PREVENT';
+
+export type RemedyAction =
+  | 'RELIEVE_RESOURCE'
+  | 'ADJUST_CAPACITY'
+  | 'REDUCE_RETRY_PRESSURE'
+  | 'RATE_LIMIT'
+  | 'SHED_LOAD'
+  | 'ADVISORY';
+
+export interface RemedyProposal {
+  id: string;
+  category: RemedyCategory;
+  title: string;
+  description: string;
+  targetService?: string;
+  targetResource?: ResourceType;
+  action: RemedyAction;
+  parameters: Record<string, any>;
+  rationale: string;
+  evidenceReferences: string[];
+  expectedBenefit?: string;
+  risk: 'LOW' | 'MEDIUM' | 'HIGH';
+  confidence: number;
+  simulatable: boolean;
+}
+
+export interface RemedySimulationPoint {
+  tick: number;
+  relativeTick: number;
+  rootPressure: number;
+  rootLatency: number;
+  downstreamLatency: number;
+  queueDepth: number;
+  timeoutRate: number;
+  retryRate: number;
+  baselineRootPressure?: number;
+  baselineRootLatency?: number;
+  baselineQueueDepth?: number;
+  baselineTimeoutRate?: number;
+}
+
+export interface RemedySimulationResult {
+  remedyId: string;
+  simulatedAtTick: number;
+  horizonTicks: number;
+  effectivenessScore: number; // [0, 100] calculated deterministically
+  pressureReduction: number;   // [0, 1]
+  latencyReduction: number;    // [0, 1]
+  timeoutReduction: number;    // [0, 1]
+  queueDrainScore: number;     // [0, 1]
+  trajectory: RemedySimulationPoint[];
+  summary: string;
+}
+
+export interface RemedyComparison {
+  incidentId: string;
+  baselineTrajectory: RemedySimulationPoint[];
+  remedySimulations: RemedySimulationResult[];
+  recommendedRemedyId?: string;
+}
+
 export interface GroundTruthReveal {
   incidentId: string;
   revealedAt: number;
@@ -643,7 +710,6 @@ export interface ExperimentEvent {
 // LEGACY ALIASES (backward compat)
 // ==========================================
 
-// Legacy aliases kept for backward compat
 export interface EvidenceRow {
   description: string;
   isSupporting: boolean;
@@ -657,9 +723,69 @@ export interface RankedCandidate {
   evidenceMatrix: EvidenceRow[];
 }
 
+// ==========================================
+// FIX STATION CONTRACTS
+// ==========================================
+
+export type FixType = 
+  | 'CODE'
+  | 'CONFIGURATION'
+  | 'INFRASTRUCTURE'
+  | 'DATABASE'
+  | 'OPERATIONAL'
+  | 'ARCHITECTURE'
+  | 'COMBINATION';
+
+export interface FixSolution {
+  id: string;
+  fixType: FixType;
+  title: string;
+  summary: string;
+  targetService: string;
+  targetResource?: ResourceType;
+  explanation: string;
+  isCodeFix: boolean;
+  codeDiff?: string;
+  codeSnippet?: string;
+  filePath?: string;
+  configuration?: string;
+  configFormat?: 'yaml' | 'json' | 'env' | 'toml';
+  infrastructure?: string;
+  commands?: string[];
+  architectureNotes?: string;
+  operationalSteps?: string[];
+  verificationSteps: string[];
+  whyThisFix: string;
+  iterationIndex: number;
+}
+
+export interface FixAttempt {
+  attemptNumber: number;
+  timestamp: number;
+  solution: FixSolution;
+  status: 'READY' | 'APPLIED' | 'FAILED' | 'VERIFIED';
+  userFeedback?: string;
+  failureAnalysis?: string;
+}
+
+export interface FixStationState {
+  incidentId: string;
+  recommendedRemedy?: RemedyProposal;
+  currentSolution?: FixSolution;
+  history: FixAttempt[];
+  verificationResult?: {
+    status: 'VERIFIED' | 'FAILED';
+    beforeMetrics: Record<string, number>;
+    afterMetrics: Record<string, number>;
+  };
+}
+
 export interface ObservableIncidentData {
   dependencyGraph: DependencyGraph;
   telemetry: TelemetryTick[];
   events: ObservableSystemEvent[];
 }
+
+
+
 

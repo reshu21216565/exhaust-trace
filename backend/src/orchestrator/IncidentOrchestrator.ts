@@ -481,6 +481,21 @@ export class IncidentOrchestrator {
     };
   }
 
+  public getWorld(): SimulationWorld | null {
+    return this.world;
+  }
+
+  public getOrCreateWorld(): SimulationWorld {
+    if (!this.world) {
+      this.startScenario('records_memory_critical');
+      for (let i = 0; i < 20; i++) {
+        this.tickSimulation();
+      }
+    }
+    return this.world!;
+  }
+
+
   public getConfidenceHistory(): ConfidencePoint[] {
     return this.confidenceHistory;
   }

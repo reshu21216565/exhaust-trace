@@ -664,7 +664,7 @@ export class InterventionValidator {
       predictionId: prediction.predictionId,
       interventionId: actual.interventionId,
       interventionType: action.interventionType,
-      target: prediction.rootCandidateId,
+      target: `${action.targetServiceId}/${action.targetResource}`,
       metricErrors,
       recoveryAccuracy,
       cascadeCollapseScore,

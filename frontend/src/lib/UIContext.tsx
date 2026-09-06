@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
-export type ViewTab = 'Overview' | 'Causal Analysis' | 'Evidence' | 'Prediction' | 'Experiment' | 'Validation' | 'Timeline' | 'Report' | 'Confidence' | 'Benchmark' | 'Concurrent' | 'Analyst Voice';
+export type ViewTab = 'Overview' | 'Causal Analysis' | 'Evidence' | 'Prediction' | 'Experiment' | 'Validation' | 'Timeline' | 'Report' | 'Confidence' | 'Benchmark' | 'Concurrent' | 'Analyst Voice' | 'Remedy Lab' | 'Fix Station';
 
 interface UIContextState {
   activeTab: ViewTab;
@@ -11,6 +11,8 @@ interface UIContextState {
   setSelectedNodeId: (id: string | null) => void;
   judgeMode: boolean;
   setJudgeMode: (enabled: boolean) => void;
+  selectedRemedyForFix: any | null;
+  setSelectedRemedyForFix: (remedy: any | null) => void;
 }
 
 const UIContext = createContext<UIContextState | null>(null);
@@ -20,6 +22,7 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [judgeMode, setJudgeMode] = useState<boolean>(false);
+  const [selectedRemedyForFix, setSelectedRemedyForFix] = useState<any | null>(null);
 
   return (
     <UIContext.Provider value={{
@@ -30,12 +33,15 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       selectedNodeId,
       setSelectedNodeId,
       judgeMode,
-      setJudgeMode
+      setJudgeMode,
+      selectedRemedyForFix,
+      setSelectedRemedyForFix
     }}>
       {children}
     </UIContext.Provider>
   );
 };
+
 
 export const useUI = () => {
   const ctx = useContext(UIContext);

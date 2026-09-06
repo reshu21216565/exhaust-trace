@@ -6,6 +6,9 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { createApiRouter } from './api/routes';
 import { createExtraApiRouter } from './api/extraRoutes';
+import { createRemedyRouter } from './api/remedyRouter';
+import { createFixStationRouter } from './api/fixStationRouter';
+
 
 const possibleEnvPaths = [
   path.resolve(__dirname, '../.env'),
@@ -33,6 +36,9 @@ export function createApplication() {
 
   app.use('/api/v1', createApiRouter(orchestrator));
   app.use('/api/v1', createExtraApiRouter(orchestrator));
+  app.use('/api/v1/remedy', createRemedyRouter(orchestrator));
+  app.use('/api/v1/fix-station', createFixStationRouter(orchestrator));
+
 
   return { app, server, orchestrator, socketServer };
 }

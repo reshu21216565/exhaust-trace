@@ -4,6 +4,8 @@ import { useUI } from '../lib/UIContext';
 import { Activity, Play, Pause, FastForward, RotateCcw, Network } from 'lucide-react';
 import { clsx } from 'clsx';
 
+import { ShinyButton } from './ui/shiny-button';
+
 export const TopBar: React.FC = () => {
   const { bundle, isConnected, pause, resume, step, setSpeed, reset } = useIncident();
   const { setJudgeMode } = useUI();
@@ -84,13 +86,15 @@ export const TopBar: React.FC = () => {
 
         <div className="h-6 w-px bg-border mx-2" />
 
-        <button 
+        <ShinyButton 
           onClick={() => setJudgeMode(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-surface border border-border hover:border-primary/50 text-xs text-textMain rounded-md transition-colors"
+          className="!py-1.5 !px-3 !text-xs !bg-transparent"
         >
-          <Network className="w-3.5 h-3.5" />
-          JUDGE MODE
-        </button>
+          <div className="flex items-center gap-1.5">
+            <Network className="w-3.5 h-3.5" />
+            JUDGE MODE
+          </div>
+        </ShinyButton>
       </div>
     </header>
   );

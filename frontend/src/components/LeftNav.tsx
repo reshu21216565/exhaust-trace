@@ -2,7 +2,7 @@ import React from 'react';
 import { useUI } from '../lib/UIContext';
 import type { ViewTab } from '../lib/UIContext';
 import { useIncident } from '../lib/IncidentContext';
-import { LayoutDashboard, Network, Database, FastForward, Beaker, CheckCircle2, Clock, FileText, TrendingUp, Layers, GitFork, Volume2 } from 'lucide-react';
+import { LayoutDashboard, Network, Database, FastForward, Beaker, CheckCircle2, Clock, FileText, TrendingUp, Layers, GitFork, Volume2, FlaskConical, Terminal } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const navItems: { label: ViewTab; icon: React.FC<any> }[] = [
@@ -17,8 +17,10 @@ const navItems: { label: ViewTab; icon: React.FC<any> }[] = [
   { label: 'Confidence', icon: TrendingUp },
   { label: 'Benchmark', icon: Layers },
   { label: 'Concurrent', icon: GitFork },
-  { label: 'Analyst Voice', icon: Volume2 },
+  { label: 'Remedy Lab', icon: FlaskConical },
+  { label: 'Fix Station', icon: Terminal },
 ];
+
 
 export const LeftNav: React.FC = () => {
   const { activeTab, setActiveTab } = useUI();
@@ -45,22 +47,32 @@ export const LeftNav: React.FC = () => {
           {navItems.map(({ label, icon: Icon }) => {
             const active = activeTab === label;
             const available = isPhaseActive(label);
+            const isRemedy = label === 'Remedy Lab';
+            const isFixStation = label === 'Fix Station';
             return (
               <button
                 key={label}
                 onClick={() => setActiveTab(label)}
                 className={clsx(
                   "w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors text-left",
-                  active 
-                    ? "bg-primary/10 text-primary border border-primary/20" 
-                    : "text-textMuted hover:bg-surfaceHover hover:text-textMain"
+                  active && !isRemedy && !isFixStation && "bg-primary/10 text-primary border border-primary/20",
+                  active && isRemedy && "bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm shadow-amber-500/20 font-bold",
+                  !active && isRemedy && "text-amber-400/90 hover:bg-amber-500/10 hover:text-amber-300",
+                  active && isFixStation && "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm shadow-emerald-500/20 font-bold",
+                  !active && isFixStation && "text-emerald-400/90 hover:bg-emerald-500/10 hover:text-emerald-300 font-semibold",
+                  !active && !isRemedy && !isFixStation && "text-textMuted hover:bg-surfaceHover hover:text-textMain"
                 )}
               >
                 <div className="flex items-center gap-3">
                   <Icon className="w-4 h-4" />
                   <span>{label}</span>
                 </div>
-                {!available && (
+                {isFixStation && (
+                  <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold animate-pulse">
+                    IMPLEMENT
+                  </span>
+                )}
+                {!available && !isFixStation && (
                   <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-surface/80 border border-border text-textMuted/70">
                     {label === 'Prediction' ? 'Pending' : 'Locked'}
                   </span>
@@ -70,6 +82,7 @@ export const LeftNav: React.FC = () => {
           })}
         </div>
       </div>
+
       
       <div className="p-4 mt-auto">
         <div className="text-[10px] text-textMuted uppercase tracking-widest mb-3">Incident Status</div>

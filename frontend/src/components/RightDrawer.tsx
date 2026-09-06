@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Bot, MessageSquare, Loader2, Send } from 'lucide-react';
 import { useIncident } from '../lib/IncidentContext';
+import { useUI } from '../lib/UIContext';
+
 
 const suggestedQueries = [
   'Why is Records Memory the top hypothesis?',
@@ -12,6 +14,13 @@ const suggestedQueries = [
 
 export const RightDrawer: React.FC = () => {
   const { bundle } = useIncident();
+  const { activeTab } = useUI();
+
+  // Hide the global Analyst drawer specifically on the Fix Station section
+  if (activeTab === 'Fix Station') {
+    return null;
+  }
+
   const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; text: string }[]>([
     {
       role: 'assistant',

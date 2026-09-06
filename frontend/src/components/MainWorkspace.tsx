@@ -12,6 +12,8 @@ import { ConfidenceTab } from './tabs/ConfidenceTab';
 import { BenchmarkTab } from './tabs/BenchmarkTab';
 import { ConcurrentTab } from './tabs/ConcurrentTab';
 import { AnalystVoiceTab } from './tabs/AnalystVoiceTab';
+import { RemedyLabTab } from './tabs/RemedyLabTab';
+import { FixStationTab } from './tabs/FixStationTab';
 
 export const MainWorkspace: React.FC = () => {
   const { activeTab } = useUI();
@@ -30,6 +32,9 @@ export const MainWorkspace: React.FC = () => {
       {activeTab === 'Benchmark' && <BenchmarkTab />}
       {activeTab === 'Concurrent' && <ConcurrentTab />}
       {activeTab === 'Analyst Voice' && <AnalystVoiceTab />}
+      {activeTab === 'Remedy Lab' && <RemedyLabTab />}
+      {activeTab === 'Fix Station' && <FixStationTab />}
     </main>
   );
 };
+

@@ -4,19 +4,21 @@ import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'rec
 
 export const TelemetrySummary: React.FC = () => {
   const { bundle } = useIncident();
-  if (!bundle || bundle.telemetryHistory.length === 0) return null;
-
+  
   // We want to show a quick sparkline for the top suspected service, or global latency
-  const topCandidate = bundle.causalAnalysis?.hypotheses?.[0];
+  const topCandidate = bundle?.causalAnalysis?.hypotheses?.[0];
   const serviceId = topCandidate ? topCandidate.serviceId : 'api_gateway';
 
   const chartData = useMemo(() => {
+    if (!bundle) return [];
     return bundle.telemetryHistory.map(tick => ({
       tick: tick.tick,
       latency: tick.services.find(s => s.serviceId === serviceId)?.metrics.latencyMs || 0,
       queue: tick.services.find(s => s.serviceId === serviceId)?.metrics.queueDepth || 0,
     }));
-  }, [bundle.telemetryHistory, serviceId]);
+  }, [bundle, serviceId]);
+
+  if (!bundle || bundle.telemetryHistory.length === 0) return null;
 
   return (
     <div className="glass-panel p-6">

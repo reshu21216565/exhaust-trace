@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useIncident } from '../../../lib/IncidentContext';
 import { Beaker, ShieldAlert, CheckCircle2, RotateCcw, TrendingDown, Lock, ArrowRight } from 'lucide-react';
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -25,30 +25,53 @@ export const Experiment: React.FC = () => {
   const [symptomResource, setSymptomResource] = useState('MEMORY');
   const [showConfirmSymptom, setShowConfirmSymptom] = useState(false);
   const [isRunningRootExperiment, setIsRunningRootExperiment] = useState(false);
+  const [isRunningSymptomExperiment, setIsRunningSymptomExperiment] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
+
+  const availableNodes = bundle?.dependencyGraph?.nodes || [];
+
+  useEffect(() => {
+    if (availableNodes.length > 0) {
+      if (!availableNodes.some(n => n.id === symptomService)) {
+        const nonRoot = availableNodes.find(n => n.id !== bundle?.prediction?.rootServiceId) || availableNodes[0];
+        setSymptomService(nonRoot.id);
+      }
+    }
+  }, [availableNodes, bundle?.prediction?.rootServiceId, symptomService]);
 
   const rootReplay = useMemo(() => summarizeTrajectory(bundle?.rootTrajectory), [bundle?.rootTrajectory]);
   const symptomReplay = useMemo(() => summarizeTrajectory(bundle?.symptomTrajectory), [bundle?.symptomTrajectory]);
 
   const rootState = useMemo(() => {
     if (!rootReplay.length) return { label: 'Awaiting experiment', tone: 'text-textMuted' };
+    if (bundle?.rootValidation) {
+      const score = bundle.rootValidation.cascadeCollapseScore;
+      if (score >= 0.7) return { label: `COLLAPSED (${(score * 100).toFixed(0)}% RELIEF)`, tone: 'text-healthy' };
+      if (score >= 0.3) return { label: `PARTIAL (${(score * 100).toFixed(0)}% RELIEF)`, tone: 'text-elevated' };
+      return { label: `FAILED (${(score * 100).toFixed(0)}% RELIEF)`, tone: 'text-degraded' };
+    }
     const first = rootReplay[0]?.impact ?? 0;
     const last = rootReplay[rootReplay.length - 1]?.impact ?? 0;
-    const collapsed = last <= first * 0.7;
+    const collapsed = last <= first * 0.5;
     return collapsed
       ? { label: 'COLLAPSED', tone: 'text-healthy' }
-      : { label: 'PARTIAL', tone: 'text-degraded' };
-  }, [rootReplay]);
+      : { label: 'PARTIAL', tone: 'text-elevated' };
+  }, [rootReplay, bundle?.rootValidation]);
 
   const symptomState = useMemo(() => {
-    if (!symptomReplay.length) return { label: 'Run a symptom experiment to compare', tone: 'text-textMuted' };
+    if (!symptomReplay.length) return { label: 'Run symptom experiment to compare', tone: 'text-textMuted' };
+    if (bundle?.symptomValidation) {
+      const score = bundle.symptomValidation.cascadeCollapseScore;
+      if (score >= 0.7) return { label: `COLLAPSED (${(score * 100).toFixed(0)}% RELIEF)`, tone: 'text-healthy' };
+      if (score >= 0.3) return { label: `PARTIAL RELIEF (${(score * 100).toFixed(0)}% RELIEF)`, tone: 'text-elevated' };
+      return { label: `PERSISTED (${((1 - score) * 100).toFixed(0)}% PRESSURE)`, tone: 'text-degraded' };
+    }
     const first = symptomReplay[0]?.impact ?? 0;
     const last = symptomReplay[symptomReplay.length - 1]?.impact ?? 0;
-    const persisted = last > first * 0.85;
-    return persisted
-      ? { label: 'PERSISTED', tone: 'text-degraded' }
-      : { label: 'PARTIAL', tone: 'text-elevated' };
-  }, [symptomReplay]);
+    if (last <= first * 0.5) return { label: 'COLLAPSED', tone: 'text-healthy' };
+    if (last <= first * 0.85) return { label: 'PARTIAL RELIEF', tone: 'text-elevated' };
+    return { label: 'PERSISTED', tone: 'text-degraded' };
+  }, [symptomReplay, bundle?.symptomValidation]);
 
   if (!bundle || !bundle.prediction) {
     return (
@@ -162,7 +185,7 @@ export const Experiment: React.FC = () => {
                   setIsRunningRootExperiment(false);
                 }
               }}
-              disabled={isRunningRootExperiment || isRunning || status === 'IDLE' || status === 'RUNNING'}
+              disabled={isRunningRootExperiment || isRunning || isRunningSymptomExperiment || status === 'IDLE' || status === 'RUNNING'}
               className="w-full py-4 bg-primary hover:bg-primaryHover disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold tracking-widest transition-colors flex justify-center items-center gap-2"
             >
               {isRunningRootExperiment || isRunning ? <RotateCcw className="w-5 h-5 animate-spin" /> : <Beaker className="w-5 h-5" />}
@@ -192,11 +215,11 @@ export const Experiment: React.FC = () => {
               <select 
                 value={symptomService}
                 onChange={e => setSymptomService(e.target.value)}
-                className="w-full bg-background border border-border rounded px-2 py-1 text-sm outline-none"
+                className="w-full bg-background border border-border rounded px-2 py-1 text-sm outline-none font-mono"
               >
-                {bundle.dependencyGraph?.nodes.map(s => (
-                <option key={s.id} value={s.id}>{s.id}</option>
-              ))}
+                {availableNodes.map(s => (
+                  <option key={s.id} value={s.id}>{s.id}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -204,7 +227,7 @@ export const Experiment: React.FC = () => {
               <select
                 value={symptomResource}
                 onChange={e => setSymptomResource(e.target.value)}
-                className="w-full bg-background border border-border rounded px-2 py-1 text-sm outline-none"
+                className="w-full bg-background border border-border rounded px-2 py-1 text-sm outline-none font-mono"
               >
                 <option value="MEMORY">MEMORY</option>
                 <option value="CPU">CPU</option>
@@ -226,32 +249,41 @@ export const Experiment: React.FC = () => {
           {!showConfirmSymptom ? (
             <button
               onClick={() => setShowConfirmSymptom(true)}
-              disabled={isRunning || !hasRootValidation}
-              className="w-full py-4 bg-surface hover:bg-surfaceHover border border-border disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold tracking-widest transition-colors flex justify-center items-center gap-2"
+              disabled={isRunning || isRunningSymptomExperiment || isRunningRootExperiment || status === 'IDLE' || status === 'RUNNING'}
+              className="w-full py-4 bg-surface hover:bg-surfaceHover border border-border disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-bold tracking-widest transition-colors flex justify-center items-center gap-2 text-degraded"
             >
-              <ShieldAlert className="w-5 h-5" />
+              <ShieldAlert className="w-5 h-5 text-degraded" />
               TEST SYMPTOM
             </button>
           ) : (
             <div className="flex flex-col gap-2">
               <p className="text-xs text-degraded text-center mb-2">
-                This will restore the exact snapshot taken at prediction lock and apply the symptom relief instead.
+                This will restore the pre-intervention snapshot and apply relief to <span className="font-mono font-bold text-textMain">{symptomService} / {symptomResource}</span>.
               </p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowConfirmSymptom(false)}
+                  disabled={isRunningSymptomExperiment}
                   className="flex-1 py-3 bg-surface hover:bg-surfaceHover border border-border rounded-lg text-xs font-bold tracking-widest"
                 >
                   CANCEL
                 </button>
                 <button
-                  onClick={() => {
-                    runSymptomExperiment(symptomService, symptomResource);
-                    setShowConfirmSymptom(false);
+                  onClick={async () => {
+                    if (isRunningSymptomExperiment || isRunning) return;
+                    setIsRunningSymptomExperiment(true);
+                    try {
+                      await runSymptomExperiment(symptomService, symptomResource);
+                    } finally {
+                      setIsRunningSymptomExperiment(false);
+                      setShowConfirmSymptom(false);
+                    }
                   }}
+                  disabled={isRunningSymptomExperiment || isRunning}
                   className="flex-1 py-3 bg-degraded hover:bg-orange-500 text-white rounded-lg text-xs font-bold tracking-widest flex justify-center items-center gap-2"
                 >
-                  CONFIRM RUN
+                  {isRunningSymptomExperiment ? <RotateCcw className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
+                  {isRunningSymptomExperiment ? 'RUNNING...' : 'CONFIRM RUN'}
                 </button>
               </div>
             </div>
@@ -274,6 +306,7 @@ export const Experiment: React.FC = () => {
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-textMuted">Left panel</p>
                 <h4 className="text-sm font-bold">Relief at true origin</h4>
+                <p className="text-xs font-mono text-primary mt-0.5">{prediction.rootServiceId} / {prediction.rootResource}</p>
               </div>
               <span className={`text-[10px] font-bold uppercase tracking-wider ${rootState.tone}`}>{rootState.label}</span>
             </div>
@@ -310,6 +343,7 @@ export const Experiment: React.FC = () => {
               <div>
                 <p className="text-[10px] uppercase tracking-widest text-textMuted">Right panel</p>
                 <h4 className="text-sm font-bold">Relief at a symptomatic service</h4>
+                <p className="text-xs font-mono text-degraded mt-0.5">{bundle.symptomValidation?.target || `${symptomService} / ${symptomResource}`}</p>
               </div>
               <span className={`text-[10px] font-bold uppercase tracking-wider ${symptomState.tone}`}>{symptomState.label}</span>
             </div>
