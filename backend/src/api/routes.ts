@@ -176,6 +176,247 @@ const callGeminiAnalyst = async (bundle: any, question: string): Promise<string>
   return generateEvidenceBackedAnswer(safeBundle, question);
 };
 
+const TAB_INSTRUCTIONS: Record<string, string> = {
+  'overview': 'Focus on current top root-cause hypothesis, overall system status, main anomaly signals, and general diagnostic confidence.',
+  'causal-analysis': 'Focus on candidate hypothesis rankings, scoring dimensions (temporal precedence, queue growth, resource pressure), and relative score differences between candidates.',
+  'evidence': 'Focus on specific supporting vs contradicting evidence items, evidence dot categories, and evidence matrix scoring impacts.',
+  'prediction': 'Focus on counterfactual recovery forecasts, expected recovery horizon ticks, predicted state transitions, and frozen target baseline metrics.',
+  'experiment': 'Focus on targeted resource relief actions, root hypothesis trial results vs symptom trial results, and counterfactual replay comparison curves.',
+  'validation': 'Focus on validation status (MATCH/MISMATCH), cascade collapse score percentage, recovery accuracy, and milestone achievements.',
+  'timeline': 'Focus on chronological event sequence, anomaly tick timestamps, and cascade propagation order over time.',
+  'report': 'Focus on diagnostic executive summary, root cause conclusion, key takeaways, and systemic recommendations.',
+  'confidence': 'Focus on confidence curve progression over simulation ticks, confidence surges, and rank stability over time.',
+  'benchmark': 'Focus on benchmark diagnostic accuracy, time-to-diagnosis latency across runs, and scenario consistency.',
+  'concurrent': 'Focus on multi-incident isolation, distinguishing overlapping cascades, and independent root failure identification.',
+  'analyst-voice': 'Focus on real-time incident analysis takeaways, key findings, and voice-guided inquiry.',
+  'remedy-lab': 'Focus on mitigation plans, capacity restoration, and resource remediation strategies.',
+  'fix-station': 'Focus on automated code patches, configuration fixes, and post-fix validation checks.'
+};
+
+const getFallbackQueriesForTab = (tab: string, bundle: any): string[] => {
+  const normTab = tab.toLowerCase().trim().replace(/\s+/g, '-');
+  const topCandidate = bundle?.causalAnalysis?.topCandidate ?? null;
+  const hypotheses = bundle?.causalAnalysis?.hypotheses ?? [];
+  const topName = topCandidate ? `${topCandidate.serviceId.toUpperCase()} ${topCandidate.resource}` : null;
+  const altCandidate = hypotheses[1] ? `${hypotheses[1].serviceId.toUpperCase()} ${hypotheses[1].resource}` : null;
+  const prediction = bundle?.prediction;
+  const rootVal = bundle?.rootValidation;
+
+  switch (normTab) {
+    case 'overview':
+      if (topName) {
+        return [
+          `Why is ${topName} the top hypothesis?`,
+          altCandidate ? `Why not ${altCandidate}?` : `What evidence supports ${topName}?`,
+          `Show the propagation chain for ${topName}.`,
+          prediction ? `What did the prediction expect for ${topName}?` : `When will a prediction be generated?`
+        ];
+      }
+      return [
+        'What triggers a causal hypothesis?',
+        'How is resource pressure measured?',
+        'What baseline telemetry is monitored?',
+        'How are microservice dependencies tracked?'
+      ];
+
+    case 'causal-analysis':
+    case 'evidence':
+      if (topName) {
+        return [
+          `Why is ${topName} ranked first in the evidence matrix?`,
+          altCandidate ? `Why was ${altCandidate} penalized?` : `Which evidence category contributed most?`,
+          `What signals support ${topName}?`,
+          `How is downstream propagation score calculated?`
+        ];
+      }
+      return [
+        'How are evidence categories scored?',
+        'What signals support a root candidate?',
+        'How are competing hypotheses penalized?',
+        'When does causal analysis run?'
+      ];
+
+    case 'prediction':
+      if (prediction) {
+        return [
+          `What recovery targets does prediction forecast for ${prediction.rootServiceId.toUpperCase()}?`,
+          `How many ticks is the expected recovery horizon?`,
+          `What predicted transitions are expected after relief?`,
+          `Why freeze prediction before intervention?`
+        ];
+      }
+      return [
+        'What triggers a counterfactual prediction?',
+        'How is recovery horizon calculated?',
+        'What baseline metrics are used for prediction?',
+        'Why freeze prediction before running experiments?'
+      ];
+
+    case 'experiment':
+      if (bundle?.rootTrajectory) {
+        return [
+          `How did root relief impact downstream queues?`,
+          `Did latency collapse after root intervention?`,
+          `How does root experiment compare with symptom relief?`,
+          `Which metrics recovered fastest during experiment?`
+        ];
+      }
+      return [
+        'What is the difference between root and symptom experiments?',
+        'How does root relief collapse a cascade?',
+        'What happens during counterfactual replay?',
+        'Why test symptom relief separately?'
+      ];
+
+    case 'validation':
+      if (rootVal) {
+        return [
+          `Did actual recovery match predicted transitions?`,
+          `What was the final cascade collapse score?`,
+          `Were all recovery milestones achieved?`,
+          `Why was validation status marked as ${rootVal.validationStatus}?`
+        ];
+      }
+      return [
+        'How is cascade collapse score calculated?',
+        'What constitutes a validation MATCH?',
+        'How is recovery accuracy measured?',
+        'When can ground truth be revealed?'
+      ];
+
+    case 'confidence':
+      if (topCandidate) {
+        return [
+          `Why did candidate confidence reach ${(topCandidate.confidence * 100).toFixed(0)}%?`,
+          `What evidence drove confidence from initial baseline?`,
+          `How did alternate candidate scores compare over time?`,
+          `When did the top hypothesis become dominant?`
+        ];
+      }
+      return [
+        'How is hypothesis confidence calculated?',
+        'What causes confidence to increase over time?',
+        'What is the confidence threshold for predictions?',
+        'How are rank shifts tracked over ticks?'
+      ];
+
+    case 'timeline':
+      return [
+        'What sequence of events triggered the incident?',
+        'Which microservice degraded first in the timeline?',
+        'How did resource pressure propagate chronologically?',
+        'What tick recorded peak queue depth?'
+      ];
+
+    case 'report':
+      return [
+        'What is the executive summary of this incident?',
+        topName ? `Why was ${topName} confirmed as root cause?` : 'What are the key diagnostic findings?',
+        'What key takeaways prevent future recurrence?',
+        'How effective was the counterfactual recovery?'
+      ];
+
+    case 'benchmark':
+      return [
+        'How does time-to-diagnosis compare across benchmark runs?',
+        'What is the average prediction accuracy in benchmark mode?',
+        'How consistent are root cause candidate rankings?',
+        'What is the target diagnostic latency per scenario?'
+      ];
+
+    case 'concurrent':
+      return [
+        'How were the two concurrent incidents isolated?',
+        'Which incident initiated first in the timeline?',
+        'How are overlapping service cascades distinguished?',
+        'What signals differentiate independent root failures?'
+      ];
+
+    case 'remedy-lab':
+    case 'fix-station':
+      return [
+        'What mitigation plan is recommended for this failure?',
+        'How will code patches prevent future resource exhaustion?',
+        'What system safety checks validate the fix?',
+        'How does the remedy plan restore baseline capacity?'
+      ];
+
+    default:
+      return [
+        'Why is the top hypothesis ranked first?',
+        'Why not the second candidate?',
+        'Show the propagation chain.',
+        'What did the prediction expect?'
+      ];
+  }
+};
+
+const callGeminiSuggestedQueries = async (bundle: any, tab: string): Promise<string[]> => {
+  const normTab = tab.toLowerCase().trim().replace(/\s+/g, '-');
+  const safeBundle = pruneHiddenFields(bundle);
+  const fallbacks = getFallbackQueriesForTab(tab, safeBundle);
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return fallbacks;
+
+  const topCandidate = safeBundle?.causalAnalysis?.topCandidate ?? null;
+  const altCandidate = safeBundle?.causalAnalysis?.hypotheses?.[1] ?? null;
+  const tabInstruction = TAB_INSTRUCTIONS[normTab] || TAB_INSTRUCTIONS['overview'];
+
+  const prompt = `You are the ExhaustTrace analyst assistant.
+Generate exactly 4 to 5 short, highly relevant suggested user questions for the active UI tab "${tab}" based on the observable incident telemetry below.
+
+Tab Focus:
+${tabInstruction}
+
+Strict Requirements:
+1. Return EXACTLY 4 or 5 questions.
+2. Each question MUST be under 12 words and phrased in a terse, direct, analyst style.
+3. Reference specific observable data from the telemetry below (such as candidate service names like "${topCandidate?.serviceId ?? 'records'}", resource "${topCandidate?.resource ?? 'MEMORY'}", confidence values, or prediction/validation metrics) if present.
+4. Return ONLY a valid JSON object matching this exact schema: { "queries": ["Question 1?", "Question 2?", "Question 3?", "Question 4?"] }. No markdown formatting, no code block backticks, no prose.
+
+Observable Incident Telemetry:
+- Status: ${safeBundle?.status ?? 'IDLE'}
+- Active Tab: ${tab}
+- Top Candidate: ${topCandidate ? `${topCandidate.serviceId}/${topCandidate.resource} (${(topCandidate.confidence * 100).toFixed(0)}% confidence, score ${Math.round(topCandidate.score)})` : 'None yet'}
+- Alternate Candidate: ${altCandidate ? `${altCandidate.serviceId}/${altCandidate.resource} (${(altCandidate.confidence * 100).toFixed(0)}% confidence)` : 'None'}
+- Prediction: ${safeBundle?.prediction ? `Locked for ${safeBundle.prediction.rootServiceId}/${safeBundle.prediction.rootResource} (horizon ${safeBundle.prediction.horizonTicks} ticks)` : 'None'}
+- Root Validation: ${safeBundle?.rootValidation ? `Status ${safeBundle.rootValidation.validationStatus}, Collapse ${Math.round((safeBundle.rootValidation.cascadeCollapseScore ?? 0) * 100)}%` : 'None'}
+- Recent Events Count: ${safeBundle?.events?.length ?? 0}
+`;
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 300,
+          responseMimeType: "application/json"
+        }
+      })
+    });
+
+    if (response.ok) {
+      const json = await response.json();
+      const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      const queries = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.queries) ? parsed.queries : null);
+
+      if (queries && queries.length >= 3) {
+        return queries.slice(0, 5).map((q: any) => String(q).trim()).filter(Boolean);
+      }
+    }
+  } catch (e) {
+    console.warn('[SuggestedQueries] Gemini request failed, using data-backed fallback:', e);
+  }
+
+  return fallbacks;
+};
+
 export function createApiRouter(orchestrator: IncidentOrchestrator): Router {
   const router = Router();
 
@@ -265,6 +506,72 @@ export function createApiRouter(orchestrator: IncidentOrchestrator): Router {
     res.json(truth);
   }));
 
+  router.post('/incident/pause', asyncHandler(async (req: Request, res: Response) => {
+    orchestrator.pause();
+    res.json({ status: 'PAUSED' });
+  }));
+
+  router.post('/incident/resume', asyncHandler(async (req: Request, res: Response) => {
+    orchestrator.resume();
+    res.json({ status: 'RUNNING' });
+  }));
+
+  router.post('/incident/step', asyncHandler(async (req: Request, res: Response) => {
+    orchestrator.step();
+    res.json(orchestrator.getBundle());
+  }));
+
+  router.post('/incident/speed', asyncHandler(async (req: Request, res: Response) => {
+    const { speed } = req.body;
+    if (!speed) throw { errorCode: 'BAD_REQUEST', message: 'speed is required' };
+    orchestrator.setSpeed(speed);
+    res.json({ speed });
+  }));
+
+  router.post('/incident/reset', asyncHandler(async (req: Request, res: Response) => {
+    orchestrator.reset();
+    res.json(orchestrator.getBundle());
+  }));
+
+  router.get('/incident/state', asyncHandler(async (req: Request, res: Response) => {
+    try {
+      res.json(orchestrator.getBundle());
+    } catch (e: any) {
+      if (e.errorCode === 'SESSION_NOT_FOUND') {
+        res.status(404).json(e);
+      } else {
+        throw e;
+      }
+    }
+  }));
+
+  router.post('/incident/prediction/lock', asyncHandler(async (req: Request, res: Response) => {
+    const prediction = orchestrator.lockPrediction();
+    res.json(prediction);
+  }));
+
+  router.post('/incident/experiment/root', asyncHandler(async (req: Request, res: Response) => {
+    const validation = orchestrator.runRootExperiment();
+    res.json(validation);
+  }));
+
+  router.post('/incident/experiment/symptom', asyncHandler(async (req: Request, res: Response) => {
+    const { serviceId, resource } = req.body;
+    if (!serviceId || !resource) throw { errorCode: 'BAD_REQUEST', message: 'serviceId and resource are required' };
+    const validation = orchestrator.runSymptomExperiment(serviceId, resource);
+    res.json(validation);
+  }));
+
+  router.post('/incident/complete', asyncHandler(async (req: Request, res: Response) => {
+    orchestrator.completeIncident();
+    res.json({ status: 'COMPLETED' });
+  }));
+
+  router.post('/incident/reveal', asyncHandler(async (req: Request, res: Response) => {
+    const truth = orchestrator.revealGroundTruth();
+    res.json(truth);
+  }));
+
   router.post('/incident/analyst-query', asyncHandler(async (req: Request, res: Response) => {
     const question = String(req.body?.question ?? '').trim();
     if (!question) {
@@ -274,6 +581,13 @@ export function createApiRouter(orchestrator: IncidentOrchestrator): Router {
     const bundle = orchestrator.getBundle();
     const answer = await callGeminiAnalyst(bundle, question);
     res.type('text/plain').send(answer);
+  }));
+
+  router.post('/incident/suggested-queries', asyncHandler(async (req: Request, res: Response) => {
+    const tab = String(req.body?.tab ?? 'Overview').trim();
+    const bundle = orchestrator.getBundle();
+    const queries = await callGeminiSuggestedQueries(bundle, tab);
+    res.json({ queries });
   }));
 
   // ─────────────────────────────────────────────────────────────────────────

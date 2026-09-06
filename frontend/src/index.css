@@ -153,3 +153,100 @@
 .react-flow__attribution {
   @apply !bg-transparent !text-textMuted/50;
 }
+
+/* ==========================================================================
+ * SENTINEL ROUTE TRANSITION ANIMATIONS
+ * Purposeful entrance/exit transition when switching into and out of Sentinel mode.
+ * ========================================================================== */
+
+@keyframes sentinelSweepBeam {
+  0% {
+    transform: translateX(-100%) skewX(-15deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.85;
+  }
+  75% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(100%) skewX(-15deg);
+    opacity: 0;
+  }
+}
+
+@keyframes sentinelRevealArrival {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes sentinelDepartExit {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: saturate(1) brightness(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.97);
+    filter: saturate(0.2) brightness(0.4);
+  }
+}
+
+.sentinel-sweep-beam {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(34, 211, 238, 0.04) 20%,
+    rgba(34, 211, 238, 0.45) 50%,
+    rgba(34, 211, 238, 0.04) 80%,
+    transparent 100%
+  );
+  box-shadow: 0 0 60px rgba(34, 211, 238, 0.5);
+  animation: sentinelSweepBeam 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.sentinel-page-enter {
+  animation: sentinelRevealArrival 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.sentinel-page-exit {
+  animation: sentinelDepartExit 200ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sentinel-sweep-beam {
+    display: none !important;
+  }
+  .sentinel-page-enter {
+    animation: simpleFadeIn 100ms linear forwards !important;
+  }
+  .sentinel-page-exit {
+    animation: simpleFadeOut 100ms linear forwards !important;
+  }
+}
+
+@keyframes simpleFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes simpleFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}

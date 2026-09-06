@@ -1,14 +1,14 @@
 import React from 'react';
 import { useIncident } from '../lib/IncidentContext';
 import { useUI } from '../lib/UIContext';
-import { Activity, Play, Pause, FastForward, RotateCcw, Network } from 'lucide-react';
+import { Activity, Play, Pause, FastForward, RotateCcw, Network, Radar } from 'lucide-react';
 import { clsx } from 'clsx';
 
 import { ShinyButton } from './ui/shiny-button';
 
 export const TopBar: React.FC = () => {
   const { bundle, isConnected, pause, resume, step, setSpeed, reset } = useIncident();
-  const { setJudgeMode } = useUI();
+  const { setJudgeMode, sentinelMode, setSentinelMode } = useUI();
 
   if (!bundle) return null;
 
@@ -85,6 +85,20 @@ export const TopBar: React.FC = () => {
         </div>
 
         <div className="h-6 w-px bg-border mx-2" />
+
+        <button
+          onClick={() => setSentinelMode(!sentinelMode)}
+          className={clsx(
+            "flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-mono font-bold transition-all border",
+            sentinelMode
+              ? "bg-primary/20 text-primary border-primary/50 shadow-md shadow-primary/20"
+              : "bg-surface border-border text-textMuted hover:text-textMain hover:border-primary/40"
+          )}
+          title="ML Early-Warning Radar"
+        >
+          <Radar className={clsx("w-3.5 h-3.5", sentinelMode && "animate-spin-slow text-primary")} />
+          <span>SENTINEL</span>
+        </button>
 
         <ShinyButton 
           onClick={() => setJudgeMode(true)}

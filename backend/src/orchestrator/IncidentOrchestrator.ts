@@ -290,6 +290,30 @@ export class IncidentOrchestrator {
       this.trueInjectedRoot = { serviceId: custom.serviceId, resourceId: custom.resourceId, severity: 1 };
       this.pendingCustomInjection = null;
     }
+
+    // Sentinel Test Scenarios
+    if (this.scenarioId === 'sentinel_test_already_breaching' && this.playback.tick === 1) {
+      this.world.injectExhaustion('portal', 'CPU', 'CRITICAL');
+      this.trueInjectedRoot = { serviceId: 'portal', resourceId: 'CPU', severity: 1 };
+    }
+
+    if (this.scenarioId === 'sentinel_test_sudden_spike' && this.playback.tick === 10) {
+      this.world.injectExhaustion('appointment', 'CONNECTIONS', 'CRITICAL');
+      this.trueInjectedRoot = { serviceId: 'appointment', resourceId: 'CONNECTIONS', severity: 1 };
+    }
+
+    if (this.scenarioId === 'sentinel_test_slow_creep') {
+      if (this.playback.tick === 1) {
+        this.world.injectExhaustion('records', 'MEMORY', 'LOW');
+        this.trueInjectedRoot = { serviceId: 'records', resourceId: 'MEMORY', severity: 1 };
+      } else if (this.playback.tick === 15) {
+        this.world.injectExhaustion('records', 'MEMORY', 'MEDIUM');
+      } else if (this.playback.tick === 30) {
+        this.world.injectExhaustion('records', 'MEMORY', 'HIGH');
+      } else if (this.playback.tick === 45) {
+        this.world.injectExhaustion('records', 'MEMORY', 'CRITICAL');
+      }
+    }
     
     const tickData = this.observer.extractObservableTelemetry(this.world);
     const events = this.observer.generateEvents(tickData, this.bundle.dependencyGraph!, this.baseCapacities, this.baseLatencies);

@@ -8,6 +8,7 @@ import { createApiRouter } from './api/routes';
 import { createExtraApiRouter } from './api/extraRoutes';
 import { createRemedyRouter } from './api/remedyRouter';
 import { createFixStationRouter } from './api/fixStationRouter';
+import { createSentinelRouter } from './sentinel/SentinelRouter';
 
 
 const possibleEnvPaths = [
@@ -38,6 +39,7 @@ export function createApplication() {
   app.use('/api/v1', createExtraApiRouter(orchestrator));
   app.use('/api/v1/remedy', createRemedyRouter(orchestrator));
   app.use('/api/v1/fix-station', createFixStationRouter(orchestrator));
+  app.use('/api/v1', createSentinelRouter(orchestrator));
 
 
   return { app, server, orchestrator, socketServer };

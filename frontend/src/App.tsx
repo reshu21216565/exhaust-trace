@@ -5,13 +5,13 @@ import { TopBar } from './components/TopBar';
 import { LeftNav } from './components/LeftNav';
 import { MainWorkspace } from './components/MainWorkspace';
 import { RightDrawer } from './components/RightDrawer';
-import { JudgeMode } from './components/JudgeMode';
+import { SentinelTransitionWrapper } from './components/sentinel/SentinelTransitionWrapper';
 import { LandingPage } from './pages/LandingPage';
 import { Loader2 } from 'lucide-react';
 
 function App() {
   const { bundle, isConnected, startIncident } = useIncident();
-  const { judgeMode } = useUI();
+  const { judgeMode, sentinelMode, setSentinelMode } = useUI();
   const [showLanding, setShowLanding] = useState<boolean>(true);
 
   if (showLanding) {
@@ -53,38 +53,7 @@ function App() {
     );
   }
 
-  if (judgeMode) {
-    return <JudgeMode />;
-  }
-
-  if (!isConnected) {
-    return (
-      <div className="flex flex-col h-screen overflow-hidden bg-background text-textMain relative">
-        <div className="absolute inset-x-0 top-0 z-50 flex justify-center pt-4 pointer-events-none">
-          <div className="rounded-full border border-yellow-500/40 bg-yellow-500/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-yellow-200 shadow-lg backdrop-blur-sm">
-            RECONNECTING...
-          </div>
-        </div>
-        <TopBar />
-        <div className="flex flex-1 overflow-hidden">
-          <LeftNav />
-          <MainWorkspace />
-          <RightDrawer />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-screen overflow-hidden bg-background text-textMain">
-      <TopBar />
-      <div className="flex flex-1 overflow-hidden">
-        <LeftNav />
-        <MainWorkspace />
-        <RightDrawer />
-      </div>
-    </div>
-  );
+  return <SentinelTransitionWrapper />;
 }
 
 export default App;

@@ -11,6 +11,8 @@ interface UIContextState {
   setSelectedNodeId: (id: string | null) => void;
   judgeMode: boolean;
   setJudgeMode: (enabled: boolean) => void;
+  sentinelMode: boolean;
+  setSentinelMode: (enabled: boolean) => void;
   selectedRemedyForFix: any | null;
   setSelectedRemedyForFix: (remedy: any | null) => void;
 }
@@ -22,6 +24,9 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [judgeMode, setJudgeMode] = useState<boolean>(false);
+  const [sentinelMode, setSentinelMode] = useState<boolean>(
+    typeof window !== 'undefined' && window.location.pathname === '/sentinel'
+  );
   const [selectedRemedyForFix, setSelectedRemedyForFix] = useState<any | null>(null);
 
   return (
@@ -34,6 +39,8 @@ export const UIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       setSelectedNodeId,
       judgeMode,
       setJudgeMode,
+      sentinelMode,
+      setSentinelMode,
       selectedRemedyForFix,
       setSelectedRemedyForFix
     }}>

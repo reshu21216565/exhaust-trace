@@ -7,6 +7,7 @@
  */
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useIncident } from '../../lib/IncidentContext';
+import { useUI } from '../../lib/UIContext';
 import {
   Bot, Send, Wifi, WifiOff, Sparkles, MessageSquare,
   ChevronRight, Loader2, RefreshCw, Volume2, VolumeX,
@@ -41,6 +42,63 @@ interface AnalystPanelProps {
 
 export const AnalystPanel: React.FC<AnalystPanelProps> = ({ compact = false }) => {
   const { bundle } = useIncident();
+  let activeTab = 'Overview';
+  try {
+    const ui = useUI();
+    if (ui?.activeTab) activeTab = ui.activeTab;
+  } catch {
+    // outside UIProvider fallback
+  }
+
+  const [suggestedQueries, setSuggestedQueries] = useState<string[]>(SUGGESTED_QUESTIONS);
+  const [isLoadingQueries, setIsLoadingQueries] = useState<boolean>(false);
+  const queriesCacheRef = useRef<Record<string, string[]>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+    const topCandidate = bundle?.causalAnalysis?.topCandidate?.serviceId || 'none';
+    const hasPrediction = bundle?.prediction ? 'pred' : 'nopred';
+    const hasValidation = bundle?.rootValidation ? 'val' : 'noval';
+    const status = bundle?.status || 'IDLE';
+
+    const cacheKey = `${activeTab}:${status}:${topCandidate}:${hasPrediction}:${hasValidation}`;
+
+    if (queriesCacheRef.current[cacheKey]) {
+      setSuggestedQueries(queriesCacheRef.current[cacheKey]);
+      setIsLoadingQueries(false);
+      return;
+    }
+
+    setIsLoadingQueries(true);
+
+    fetch(`${API_BASE}/incident/suggested-queries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tab: activeTab })
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load queries');
+        return res.json();
+      })
+      .then(data => {
+        if (!isMounted) return;
+        if (Array.isArray(data?.queries) && data.queries.length > 0) {
+          queriesCacheRef.current[cacheKey] = data.queries;
+          setSuggestedQueries(data.queries);
+        }
+      })
+      .catch(() => {
+        // keep current fallback
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingQueries(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeTab, bundle?.status, bundle?.causalAnalysis?.topCandidate?.serviceId, bundle?.prediction, bundle?.rootValidation]);
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -343,12 +401,12 @@ export const AnalystPanel: React.FC<AnalystPanelProps> = ({ compact = false }) =
 
         {/* Quick chips */}
         <div className="flex flex-wrap gap-1">
-          {SUGGESTED_QUESTIONS.slice(0, 3).map(q => (
+          {suggestedQueries.slice(0, 3).map(q => (
             <button
               key={q}
               onClick={() => sendQuestion(q)}
-              disabled={isLoading}
-              className="px-2 py-0.5 text-[9px] font-mono bg-surface border border-border hover:border-primary/40 text-textMuted hover:text-primary rounded transition-colors"
+              disabled={isLoading || isLoadingQueries}
+              className="px-2 py-0.5 text-[9px] font-mono bg-surface border border-border hover:border-primary/40 text-textMuted hover:text-primary rounded transition-colors disabled:opacity-50"
             >
               {q.slice(0, 30)}…
             </button>
@@ -494,12 +552,12 @@ export const AnalystPanel: React.FC<AnalystPanelProps> = ({ compact = false }) =
           Suggested Voice Questions
         </h3>
         <div className="flex flex-wrap gap-2">
-          {SUGGESTED_QUESTIONS.map(q => (
+          {suggestedQueries.map(q => (
             <button
               key={q}
               onClick={() => sendQuestion(q)}
-              disabled={isLoading}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono bg-surface border border-border hover:border-primary/40 hover:bg-surfaceHover text-textMuted hover:text-textMain rounded-lg transition-colors"
+              disabled={isLoading || isLoadingQueries}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono bg-surface border border-border hover:border-primary/40 hover:bg-surfaceHover text-textMuted hover:text-textMain rounded-lg transition-colors disabled:opacity-50"
             >
               <ChevronRight className="w-3 h-3 text-primary" />
               {q}

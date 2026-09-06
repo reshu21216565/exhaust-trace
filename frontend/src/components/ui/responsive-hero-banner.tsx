@@ -35,27 +35,27 @@ interface ResponsiveHeroBannerProps {
 }
 
 export const ResponsiveHeroBanner: React.FC<ResponsiveHeroBannerProps> = ({
-    logoUrl = "https://cdn.21st.dev/assets/mirror/c4/c4d5f159140e3ccc35a8bd4f043453cb9e2692f700206e43855ff598c171b924.png",
+    logoUrl: _logoUrl = "https://cdn.21st.dev/assets/mirror/c4/c4d5f159140e3ccc35a8bd4f043453cb9e2692f700206e43855ff598c171b924.png",
     backgroundImageUrl = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2000&auto=format&fit=crop",
-    navLinks = [
+    navLinks: _navLinks = [
         { label: "Overview", href: "#", isActive: true },
         { label: "Remedies", href: "#" },
         { label: "Simulation", href: "#" },
         { label: "Compare", href: "#" }
     ],
-    ctaButtonText = "Run Remedy",
-    ctaButtonHref = "#",
+    ctaButtonText: _ctaButtonText = "Run Remedy",
+    ctaButtonHref: _ctaButtonHref = "#",
     badgeLabel = "REMEDY LAB",
     badgeText = "AI Incident Resolution Laboratory",
     title = "From Root Cause to",
     titleLine2 = "Tested Resolution",
     description = "Test proposed remediation strategies against an isolated simulation fork of the incident state before applying changes to production.",
     primaryButtonText = "Generate AI Remedies",
-    primaryButtonHref = "#",
+    primaryButtonHref: _primaryButtonHref = "#",
     secondaryButtonText = "View Incident Graph",
-    secondaryButtonHref = "#",
-    partnersTitle = "Grounded in true telemetry physics & Gemini analysis",
-    partners = [],
+    secondaryButtonHref: _secondaryButtonHref = "#",
+    partnersTitle: _partnersTitle = "Grounded in true telemetry physics & Gemini analysis",
+    partners: _partners = [],
     onPrimaryClick,
     onSecondaryClick
 }) => {
